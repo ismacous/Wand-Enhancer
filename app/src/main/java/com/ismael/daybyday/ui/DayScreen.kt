@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -224,7 +225,9 @@ fun DayScreen(
                 onValueChange = { title = it },
                 label = { Text("Titre de la journée") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("day-title-field"),
             )
 
             Spacer(Modifier.height(12.dp))
@@ -321,6 +324,7 @@ private fun ColorChoice(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .testTag("color-${dayColor.name}")
                 .clip(RoundedCornerShape(16.dp))
                 .background(dayColor.color)
                 .border(
