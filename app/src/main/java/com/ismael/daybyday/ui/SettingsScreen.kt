@@ -52,10 +52,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ismael.daybyday.data.Backup
 import com.ismael.daybyday.data.TagCategory
 import com.ismael.daybyday.dayByDayApp
+import com.ismael.daybyday.health.HealthConnectSource
+import com.ismael.daybyday.health.ScreenTimeSource
 import com.ismael.daybyday.work.DailyScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -99,6 +102,9 @@ fun SettingsScreen() {
     var showEraseDialog by remember { mutableStateOf(false) }
     var showNewTagDialog by remember { mutableStateOf(false) }
     var searchingBackup by remember { mutableStateOf(false) }
+    var stepsGranted by remember { mutableStateOf(false) }
+    var screenGranted by remember { mutableStateOf(false) }
+    var permissionsChecked by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var mediaBytes by remember { mutableLongStateOf(0L) }
     var exportYear by remember { mutableIntStateOf(LocalDate.now().year) }
@@ -113,6 +119,18 @@ fun SettingsScreen() {
 
     LaunchedEffect(busy) {
         mediaBytes = withContext(Dispatchers.IO) { repository.media.totalBytes() }
+    }
+
+    LaunchedEffect(permissionsChecked) {
+        stepsGranted = HealthConnectSource.hasPermission(context)
+        screenGranted = ScreenTimeSource.hasPermission(context)
+    }
+
+    val healthPermissions = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        stepsGranted = granted.containsAll(HealthConnectSource.permissions)
+        permissionsChecked += 1
     }
 
     val notificationPermission = rememberLauncherForActivityResult(
@@ -263,6 +281,64 @@ fun SettingsScreen() {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // --- Sante & telephone ----------------------------------------
+            SectionCard(title = "Pas et temps d'écran") {
+                Text(
+                    "Ces deux mesures sont lues directement sur le téléphone et " +
+                        "restent dedans. L'application n'a pas accès à Internet : " +
+                        "elle ne peut rien envoyer nulle part.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Nombre de pas", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = when {
+                                !HealthConnectSource.isAvailable(context) ->
+                                    "Health Connect n'est pas disponible sur ce téléphone."
+                                stepsGranted -> "Connecté à Health Connect."
+                                else -> "Samsung Health écrit tes pas dans Health Connect."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (HealthConnectSource.isAvailable(context) && !stepsGranted) {
+                        TextButton(
+                            onClick = { healthPermissions.launch(HealthConnectSource.permissions) }
+                        ) { Text("Autoriser") }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Temps sur les applis", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = if (screenGranted) {
+                                "Autorisé."
+                            } else {
+                                "À activer dans « Accès aux données d'utilisation »."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (!screenGranted) {
+                        TextButton(onClick = {
+                            runCatching { context.startActivity(ScreenTimeSource.settingsIntent()) }
+                            permissionsChecked += 1
+                        }) { Text("Ouvrir") }
+                    }
+                }
             }
 
             Spacer(Modifier.height(16.dp))

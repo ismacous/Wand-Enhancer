@@ -55,7 +55,11 @@ class MigrationTest {
         legacy.close()
 
         val database = Room.databaseBuilder(context, AppDatabase::class.java, databaseName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4,
+            )
             .build()
 
         try {
@@ -84,6 +88,8 @@ class MigrationTest {
                 assertEquals(1, dao.allMoney().size)
                 // Les moments de la journee existent et sont vides.
                 assertEquals(null, day?.partMorning)
+                assertEquals(null, day?.steps)
+                assertEquals(null, day?.screenMinutes)
                 assertEquals(true, day?.colorManual)
             }
         } finally {

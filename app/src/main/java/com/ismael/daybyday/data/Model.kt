@@ -117,6 +117,10 @@ data class DayEntry(
     val partNight: Int? = null,
     /** true si la couleur du jour a ete choisie a la main plutot que calculee. */
     val colorManual: Boolean? = null,
+    /** Pas du jour, lus depuis Health Connect quand l'acces est accorde. */
+    val steps: Int? = null,
+    /** Minutes passees sur les applications ce jour-la. */
+    val screenMinutes: Int? = null,
 ) {
     val color: DayColor? get() = DayColor.fromKey(colorKey)
 

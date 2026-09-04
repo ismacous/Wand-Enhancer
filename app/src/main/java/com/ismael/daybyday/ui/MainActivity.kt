@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import com.ismael.daybyday.dayByDayApp
+import com.ismael.daybyday.health.HealthSync
 import com.ismael.daybyday.ui.theme.DayByDayTheme
 
 class MainActivity : FragmentActivity() {
@@ -33,6 +34,10 @@ class MainActivity : FragmentActivity() {
                 LaunchedEffect(Unit) {
                     offerRestore = !app.prefs.firstRunRestoreChecked &&
                         app.repository.allDays().isEmpty()
+                    // Met a jour les pas et le temps d'ecran des jours deja notes.
+                    runCatching {
+                        HealthSync.syncRecentDays(this@MainActivity, app.repository)
+                    }
                 }
 
                 Surface(

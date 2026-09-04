@@ -77,9 +77,13 @@ import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Tag
 import com.ismael.daybyday.data.TagCategory
 import com.ismael.daybyday.dayByDayApp
+import com.ismael.daybyday.health.HealthConnectSource
+import com.ismael.daybyday.health.ScreenTimeSource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 private const val SAVE_DEBOUNCE_MS = 400L
@@ -109,6 +113,8 @@ fun DayScreen(
     var parts by remember { mutableStateOf<Map<DayPart, Int>>(emptyMap()) }
     var colorManual by remember { mutableStateOf(false) }
     var weightText by remember { mutableStateOf("") }
+    var stepsValue by remember { mutableStateOf<Int?>(null) }
+    var screenValue by remember { mutableStateOf<Int?>(null) }
     var loadedFor by remember { mutableStateOf<Long?>(null) }
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
     var showNewTagDialog by remember { mutableStateOf(false) }
@@ -130,6 +136,8 @@ fun DayScreen(
         foodLevel = foodLevel,
         wentOut = wentOut,
         weightKg = weightText.replace(',', '.').toDoubleOrNull(),
+        steps = stepsValue,
+        screenMinutes = screenValue,
         partMorning = parts[DayPart.MORNING],
         partAfternoon = parts[DayPart.AFTERNOON],
         partEvening = parts[DayPart.EVENING],
@@ -157,12 +165,23 @@ fun DayScreen(
             entry?.partColorKey(part)?.let { part to it }
         }.toMap()
         colorManual = entry?.colorManual ?: (entry?.colorKey != null)
+        stepsValue = entry?.steps
+        screenValue = entry?.screenMinutes
         loadedFor = epochDay
+
+        // Pas et temps d'ecran du jour, lus en local si les acces sont donnes.
+        val day = LocalDate.ofEpochDay(epochDay)
+        withContext(Dispatchers.IO) {
+            HealthConnectSource.stepsFor(context, day)?.let { stepsValue = it }
+            ScreenTimeSource.minutesFor(context, day)?.let { screenValue = it }
+        }
     }
 
     LaunchedEffect(
         epochDay,
         loadedFor,
+        stepsValue,
+        screenValue,
         colorKey,
         title,
         note,
@@ -416,6 +435,28 @@ fun DayScreen(
                 }
 
                 Spacer(Modifier.height(14.dp))
+
+                if (stepsValue != null || screenValue != null) {
+                    Text(
+                        "Relevé du téléphone",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    stepsValue?.let { steps ->
+                        Text(
+                            "🚶 ${"%,d".format(steps).replace(',', ' ')} pas",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    screenValue?.let { minutes ->
+                        Text(
+                            "📱 ${minutes / 60} h ${"%02d".format(minutes % 60)} sur les applis",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    Spacer(Modifier.height(14.dp))
+                }
 
                 OutlinedTextField(
                     value = weightText,

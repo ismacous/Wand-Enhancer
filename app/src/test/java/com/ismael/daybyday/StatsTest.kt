@@ -228,4 +228,49 @@ class StatsTest {
         val day = DayEntry(epochDay = 0).withPartColor(DayPart.NIGHT, DayColor.RED.key)
         assertTrue(!day.isEmpty)
     }
+
+    @Test
+    fun `les pas ressortent comme facteur au dessus de la mediane`() {
+        val start = LocalDate.of(2026, 4, 1)
+        val days = buildList {
+            repeat(5) { offset ->
+                add(
+                    DayEntry(
+                        epochDay = start.plusDays(offset.toLong()).toEpochDay(),
+                        colorKey = DayColor.GREEN.key,
+                        steps = 9000 + offset,
+                    )
+                )
+            }
+            repeat(5) { offset ->
+                add(
+                    DayEntry(
+                        epochDay = start.plusDays((10 + offset).toLong()).toEpochDay(),
+                        colorKey = DayColor.RED.key,
+                        steps = 500 + offset,
+                    )
+                )
+            }
+        }
+
+        val insights = Stats.insights(days, emptyList(), emptyList())
+
+        assertEquals(1, insights.size)
+        assertTrue(insights.first().label.startsWith("Les jours à plus de"))
+        assertEquals(2.0, insights.first().delta, 0.001)
+    }
+
+    @Test
+    fun `sans assez de journees mesurees les pas sont ignores`() {
+        val start = LocalDate.of(2026, 5, 1)
+        val days = (0 until 4).map { offset ->
+            DayEntry(
+                epochDay = start.plusDays(offset.toLong()).toEpochDay(),
+                colorKey = DayColor.GREEN.key,
+                steps = 1000 * offset,
+            )
+        }
+
+        assertTrue(Stats.insights(days, emptyList(), emptyList()).isEmpty())
+    }
 }

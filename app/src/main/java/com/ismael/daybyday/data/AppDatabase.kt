@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DayTagCrossRef::class,
         MoneyEntry::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -125,6 +125,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN steps INTEGER")
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN screenMinutes INTEGER")
+            }
+        }
+
         private val seedCallback = object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 seedTags(db)
@@ -140,7 +147,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(seedCallback)
                 .build()
                 .also { instance = it }
