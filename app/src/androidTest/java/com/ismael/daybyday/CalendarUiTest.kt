@@ -9,8 +9,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.ismael.daybyday.data.Prefs
 import com.ismael.daybyday.ui.Dates
 import com.ismael.daybyday.ui.MainActivity
+import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,6 +22,20 @@ import java.time.YearMonth
 
 @RunWith(AndroidJUnit4::class)
 class CalendarUiTest {
+
+    companion object {
+        /**
+         * L'ecran de reprise de sauvegarde s'affiche quand la base est vide.
+         * On le desactive avant que la regle ne lance l'activite, sinon il
+         * masque le calendrier pendant les tests.
+         */
+        @JvmStatic
+        @BeforeClass
+        fun desactiverLEcranDeReprise() {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            Prefs(context).firstRunRestoreChecked = true
+        }
+    }
 
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()

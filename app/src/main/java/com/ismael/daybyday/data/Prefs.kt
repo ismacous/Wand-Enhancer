@@ -113,6 +113,11 @@ class Prefs(context: Context) {
         get() = prefs.getLong(KEY_AUTO_BACKUP_LAST, 0L)
         set(value) = prefs.edit().putLong(KEY_AUTO_BACKUP_LAST, value).apply()
 
+    /** Passe a true des qu'on a propose (ou fait) une reprise de sauvegarde. */
+    var firstRunRestoreChecked: Boolean
+        get() = prefs.getBoolean(KEY_FIRST_RUN_RESTORE, false)
+        set(value) = prefs.edit().putBoolean(KEY_FIRST_RUN_RESTORE, value).apply()
+
     var lastAutoBackupError: String?
         get() = prefs.getString(KEY_AUTO_BACKUP_ERROR, null)
         set(value) = prefs.edit().putString(KEY_AUTO_BACKUP_ERROR, value).apply()
@@ -149,6 +154,7 @@ class Prefs(context: Context) {
         const val KEY_AUTO_BACKUP_FOLDER = "auto_backup_folder"
         const val KEY_AUTO_BACKUP_LAST = "auto_backup_last"
         const val KEY_AUTO_BACKUP_ERROR = "auto_backup_error"
+        const val KEY_FIRST_RUN_RESTORE = "first_run_restore_checked"
         const val ITERATIONS = 120_000
     }
 }

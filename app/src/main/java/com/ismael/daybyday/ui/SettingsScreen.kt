@@ -98,6 +98,7 @@ fun SettingsScreen() {
     var showPinDialog by remember { mutableStateOf(false) }
     var showEraseDialog by remember { mutableStateOf(false) }
     var showNewTagDialog by remember { mutableStateOf(false) }
+    var searchingBackup by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var mediaBytes by remember { mutableLongStateOf(0L) }
     var exportYear by remember { mutableIntStateOf(LocalDate.now().year) }
@@ -405,6 +406,14 @@ fun SettingsScreen() {
                 }
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(
+                    onClick = { searchingBackup = true },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Chercher une sauvegarde dans un dossier")
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
                     onClick = {
                         importBackup.launch(
                             arrayOf("application/zip", "application/octet-stream", "*/*")
@@ -413,7 +422,7 @@ fun SettingsScreen() {
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Restaurer une sauvegarde")
+                    Text("Choisir un fichier de sauvegarde")
                 }
             }
 
@@ -562,6 +571,21 @@ fun SettingsScreen() {
             Spacer(Modifier.height(40.dp))
         }
     }
+
+    FolderBackupRestorer(
+        active = searchingBackup,
+        onDismiss = { searchingBackup = false },
+        onRestored = { summary ->
+            searchingBackup = false
+            autoBackupFolder = prefs.autoBackupFolder
+            autoBackupEnabled = prefs.autoBackupEnabled
+            scope.launch {
+                snackbar.showSnackbar(
+                    "Restauration terminée : ${summary.days} jour(s), ${summary.mediaFiles} média(s)."
+                )
+            }
+        },
+    )
 
     if (showPinDialog) {
         PinDialog(
