@@ -36,7 +36,7 @@ object Backup {
 
     private const val JSON_NAME = "daybyday.json"
     private const val MEDIA_PREFIX = "media/"
-    private const val FORMAT_VERSION = 3
+    private const val FORMAT_VERSION = 4
 
     const val AUTO_BACKUP_NAME = "DayByDay-sauvegarde-auto.zip"
 
@@ -99,6 +99,8 @@ object Backup {
                     .put("partEvening", day.partEvening ?: JSONObject.NULL)
                     .put("partNight", day.partNight ?: JSONObject.NULL)
                     .put("colorManual", day.colorManual ?: JSONObject.NULL)
+                    .put("steps", day.steps ?: JSONObject.NULL)
+                    .put("screenMinutes", day.screenMinutes ?: JSONObject.NULL)
             )
         }
         root.put("days", daysJson)
@@ -279,6 +281,8 @@ object Backup {
                         } else {
                             item.optBoolean("colorManual")
                         },
+                        steps = item.optIntOrNull("steps"),
+                        screenMinutes = item.optIntOrNull("screenMinutes"),
                     )
                 }
 
@@ -423,6 +427,7 @@ object Backup {
                     entry.food?.let { add("Alimentation : ${it.label}") }
                     entry.wentOut?.let { add(if (it) "Sorti" else "Pas sorti") }
                     entry.weightKg?.let { add("Poids : ${"%.1f".format(it)} kg") }
+                    entry.steps?.let { add("$it pas") }
                 }
                 if (details.isNotEmpty()) builder.appendLine(details.joinToString(" · "))
 

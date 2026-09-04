@@ -166,6 +166,30 @@ object Stats {
             minDays = minDays,
         )?.let(results::add)
 
+        val stepDays = colored.filter { it.steps != null }
+        if (stepDays.size >= minDays * 2) {
+            val median = stepDays.mapNotNull { it.steps }.sorted()[stepDays.size / 2]
+            compare(
+                label = "Les jours à plus de $median pas",
+                withGroup = stepDays.filter { (it.steps ?: 0) >= median },
+                withoutGroup = stepDays.filter { (it.steps ?: 0) < median },
+                minDays = minDays,
+            )?.let(results::add)
+        }
+
+        val screenDays = colored.filter { it.screenMinutes != null }
+        if (screenDays.size >= minDays * 2) {
+            val median = screenDays.mapNotNull { it.screenMinutes }.sorted()[screenDays.size / 2]
+            val hours = median / 60
+            val minutes = median % 60
+            compare(
+                label = "Les jours à moins de ${hours}h${"%02d".format(minutes)} d'écran",
+                withGroup = screenDays.filter { (it.screenMinutes ?: 0) < median },
+                withoutGroup = screenDays.filter { (it.screenMinutes ?: 0) >= median },
+                minDays = minDays,
+            )?.let(results::add)
+        }
+
         val taggedDays = links.groupBy({ it.tagId }, { it.epochDay })
         val byEpochDay = colored.associateBy { it.epochDay }
         tags.forEach { tag ->
