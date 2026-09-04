@@ -16,9 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,15 +76,15 @@ fun YearScreen(
                 title = { Text("Année $year") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
                 actions = {
                     IconButton(onClick = { year -= 1 }) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Année précédente")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Année précédente")
                     }
                     IconButton(onClick = { year += 1 }) {
-                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Année suivante")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Année suivante")
                     }
                 },
             )
