@@ -49,9 +49,32 @@ enum class DayColor(val key: Int, val score: Int, val label: String, val color: 
     }
 }
 
+/** Niveau d'activite physique de la journee. */
+enum class SportLevel(val key: Int, val label: String, val emoji: String) {
+    NONE(0, "Rien bougé", "😴"),
+    LIGHT(1, "Un peu bougé", "🚶"),
+    GOOD(2, "Vraie séance", "💪");
+
+    companion object {
+        fun fromKey(key: Int?): SportLevel? = entries.firstOrNull { it.key == key }
+    }
+}
+
+/** Ressenti sur l'alimentation de la journee. */
+enum class FoodLevel(val key: Int, val label: String, val emoji: String) {
+    HARD(0, "Compliquée", "🍔"),
+    OK(1, "Correcte", "🍽️"),
+    GOOD(2, "Bien mangé", "🥗");
+
+    companion object {
+        fun fromKey(key: Int?): FoodLevel? = entries.firstOrNull { it.key == key }
+    }
+}
+
 /**
  * Une journee du calendrier. La cle primaire est le numero de jour epoch
  * (LocalDate.toEpochDay) : simple a trier et a interroger par plage.
+ * Tous les champs de suivi sont nullables : "non renseigne" est une reponse.
  */
 @Entity(tableName = "day_entries")
 data class DayEntry(
@@ -60,11 +83,43 @@ data class DayEntry(
     val title: String = "",
     val note: String = "",
     val updatedAt: Long = System.currentTimeMillis(),
+    val sportLevel: Int? = null,
+    val foodLevel: Int? = null,
+    val wentOut: Boolean? = null,
+    val weightKg: Double? = null,
 ) {
     val color: DayColor? get() = DayColor.fromKey(colorKey)
 
-    val isEmpty: Boolean get() = colorKey == null && title.isBlank() && note.isBlank()
+    val sport: SportLevel? get() = SportLevel.fromKey(sportLevel)
+
+    val food: FoodLevel? get() = FoodLevel.fromKey(foodLevel)
+
+    val isEmpty: Boolean
+        get() = colorKey == null && title.isBlank() && note.isBlank() &&
+            sportLevel == null && foodLevel == null && wentOut == null && weightKg == null
 }
+
+/** Etiquette personnalisable, attachable a autant de journees que voulu. */
+@Entity(tableName = "tags")
+data class Tag(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val emoji: String = "",
+    val sortOrder: Int = 0,
+) {
+    val display: String get() = if (emoji.isBlank()) name else "$emoji $name"
+}
+
+/** Association entre une journee et une etiquette. */
+@Entity(
+    tableName = "day_tags",
+    primaryKeys = ["epochDay", "tagId"],
+    indices = [Index("tagId")],
+)
+data class DayTagCrossRef(
+    val epochDay: Long,
+    val tagId: Long,
+)
 
 enum class MediaKind { PHOTO, VIDEO }
 
@@ -86,3 +141,6 @@ data class MediaItem(
 
 /** Nombre de medias par jour, pour afficher une pastille dans le calendrier. */
 data class DayMediaCount(val epochDay: Long, val count: Int)
+
+/** Poids releve un jour donne, pour la courbe de suivi. */
+data class WeightPoint(val epochDay: Long, val weightKg: Double)

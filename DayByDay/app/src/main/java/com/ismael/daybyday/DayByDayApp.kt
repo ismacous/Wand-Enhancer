@@ -5,8 +5,12 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationManagerCompat
 import com.ismael.daybyday.data.DayRepository
 import com.ismael.daybyday.data.Prefs
+import com.ismael.daybyday.work.DailyScheduler
+import com.ismael.daybyday.work.ReminderWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +23,21 @@ class DayByDayApp : Application() {
 
     /** Portee de coroutine liee au process, pour les sauvegardes de fin d'ecran. */
     val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onCreate() {
+        super.onCreate()
+        createReminderChannel()
+        DailyScheduler.rescheduleAll(this, prefs)
+    }
+
+    private fun createReminderChannel() {
+        val channel = NotificationChannelCompat
+            .Builder(ReminderWorker.CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+            .setName("Rappel quotidien")
+            .setDescription("Le petit rappel du soir pour noter ta journée.")
+            .build()
+        NotificationManagerCompat.from(this).createNotificationChannel(channel)
+    }
 }
 
 /** Etat de verrouillage de l'application, partage entre l'activite et l'UI. */
@@ -31,10 +50,6 @@ class LockController(private val prefs: Prefs) {
 
     fun unlock() {
         isLocked = false
-    }
-
-    fun lockNow() {
-        if (prefs.lockEnabled && prefs.hasPin) isLocked = true
     }
 
     fun onEnterBackground() {

@@ -7,7 +7,10 @@ import com.ismael.daybyday.data.AppDatabase
 import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayDao
 import com.ismael.daybyday.data.DayEntry
+import com.ismael.daybyday.data.DayTagCrossRef
 import com.ismael.daybyday.data.MediaItem
+import com.ismael.daybyday.data.SportLevel
+import com.ismael.daybyday.data.Tag
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -108,5 +111,73 @@ class DayDaoTest {
         dao.deleteDay(epochDay)
 
         assertNull(dao.dayOnce(epochDay))
+    }
+
+    @Test
+    fun rechercheDansLesTitresEtLesNotes() = runBlocking {
+        val base = LocalDate.of(2026, 9, 1).toEpochDay()
+        dao.upsertDay(DayEntry(epochDay = base, title = "Retour à la maison", note = "Journée calme"))
+        dao.upsertDay(DayEntry(epochDay = base + 1, title = "Boulot", note = "Longue réunion"))
+
+        val byTitle = dao.search("maison").first()
+        val byNote = dao.search("réunion").first()
+        val nothing = dao.search("zzzz").first()
+
+        assertEquals(1, byTitle.size)
+        assertEquals(base, byTitle.first().epochDay)
+        assertEquals(1, byNote.size)
+        assertEquals(0, nothing.size)
+    }
+
+    @Test
+    fun etiquettesLieesEtDelieesDUneJournee() = runBlocking {
+        val epochDay = LocalDate.of(2026, 9, 2).toEpochDay()
+        val tagId = dao.insertTag(Tag(name = "Marche", emoji = "🚶", sortOrder = 0))
+        dao.upsertDay(DayEntry(epochDay = epochDay))
+
+        dao.linkTag(DayTagCrossRef(epochDay = epochDay, tagId = tagId))
+        assertEquals(1, dao.tagCountForDay(epochDay))
+        assertEquals("Marche", dao.observeTagsForDay(epochDay).first().first().name)
+
+        dao.unlinkTag(epochDay, tagId)
+        assertEquals(0, dao.tagCountForDay(epochDay))
+    }
+
+    @Test
+    fun supprimerUneEtiquetteNeCasseRien() = runBlocking {
+        val epochDay = LocalDate.of(2026, 9, 3).toEpochDay()
+        val tagId = dao.insertTag(Tag(name = "Fast-food", sortOrder = 1))
+        dao.upsertDay(DayEntry(epochDay = epochDay))
+        dao.linkTag(DayTagCrossRef(epochDay = epochDay, tagId = tagId))
+
+        dao.deleteTagLinks(tagId)
+        dao.deleteTag(tagId)
+
+        assertEquals(0, dao.allTags().size)
+        assertEquals(0, dao.allDayTags().size)
+        assertEquals(epochDay, dao.dayOnce(epochDay)?.epochDay)
+    }
+
+    @Test
+    fun suiviDuPoidsEtDesDetailsDeLaJournee() = runBlocking {
+        val base = LocalDate.of(2026, 9, 4).toEpochDay()
+        dao.upsertDay(
+            DayEntry(
+                epochDay = base,
+                weightKg = 130.4,
+                sportLevel = SportLevel.GOOD.key,
+                wentOut = true,
+            )
+        )
+        dao.upsertDay(DayEntry(epochDay = base + 1, weightKg = 129.8))
+        dao.upsertDay(DayEntry(epochDay = base + 2, title = "Sans poids"))
+
+        val weights = dao.observeWeights().first()
+        val stored = dao.dayOnce(base)
+
+        assertEquals(2, weights.size)
+        assertEquals(130.4, weights.first().weightKg, 0.001)
+        assertEquals(SportLevel.GOOD, stored?.sport)
+        assertEquals(true, stored?.wentOut)
     }
 }

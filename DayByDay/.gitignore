@@ -4,7 +4,6 @@ build/
 local.properties
 *.apk
 *.aab
-*.keystore
 
 # IDE
 .idea/

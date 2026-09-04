@@ -3,6 +3,7 @@ package com.ismael.daybyday.ui
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,18 +15,18 @@ import com.ismael.daybyday.ui.theme.DayByDayTheme
 class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         applySecureFlag()
 
         setContent {
             DayByDayTheme {
                 val app = dayByDayApp
-                val locked = app.lock.isLocked
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    if (locked) {
+                    if (app.lock.isLocked) {
                         LockScreen(
                             prefs = app.prefs,
                             onUnlocked = { app.lock.unlock() },

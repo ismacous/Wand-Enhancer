@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -30,10 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,13 +46,12 @@ import java.time.YearMonth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YearScreen(
-    initialYear: Int,
-    onBack: () -> Unit,
+    year: Int,
+    onYearChange: (Int) -> Unit,
     onMonthClick: (YearMonth) -> Unit,
     onDayClick: (LocalDate) -> Unit,
 ) {
     val repository = LocalContext.current.dayByDayApp.repository
-    var year by rememberSaveable { mutableIntStateOf(initialYear) }
     val today = LocalDate.now()
 
     val start = remember(year) { LocalDate.of(year, 1, 1) }
@@ -74,17 +69,18 @@ fun YearScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Année $year") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                },
                 actions = {
-                    IconButton(onClick = { year -= 1 }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Année précédente")
+                    IconButton(onClick = { onYearChange(year - 1) }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Année précédente",
+                        )
                     }
-                    IconButton(onClick = { year += 1 }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Année suivante")
+                    IconButton(onClick = { onYearChange(year + 1) }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Année suivante",
+                        )
                     }
                 },
             )
@@ -146,6 +142,7 @@ private fun MiniMonth(
 
     Card(
         modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(8.dp)) {

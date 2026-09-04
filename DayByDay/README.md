@@ -10,27 +10,34 @@ sur un réseau.
 
 ## Fonctionnalités
 
+- **Accueil** : la journée du jour se colorie en un tap, sans ouvrir d'écran.
 - **Calendrier mensuel** : chaque jour se colorie en vert, orange, rouge ou noir.
-  Une pastille indique la présence d'un texte, une autre celle de médias.
+  Des pastilles indiquent la présence d'un texte, de médias, ou d'un suivi rempli.
 - **Note de la semaine** : à droite de chaque ligne du calendrier, une case
   colorée résume la semaine (moyenne des jours notés) avec son numéro.
-- **Bilan du mois** : moyenne sur 3, répartition des couleurs, nombre de jours notés.
-- **Vue année** : les 12 mois en miniature, chacun avec sa moyenne ; on tape sur
-  un mois pour l'ouvrir, sur un jour pour l'éditer.
+- **Vue année** : les 12 mois en miniature, chacun avec sa moyenne.
 - **Journal du jour** : titre + texte libre, sauvegarde automatique, navigation
   jour par jour.
-- **Photos et vidéos** : ajoutées depuis le sélecteur Android (aucune permission
-  d'accès à la galerie n'est nécessaire), copiées dans l'espace privé de l'app,
-  visibles en plein écran avec lecture vidéo intégrée.
-- **Statistiques** : moyenne annuelle, mois par mois, meilleure semaine et
-  semaine la plus dure, séries de jours notés.
+- **Suivi quotidien** : sport (rien / un peu / vraie séance), alimentation
+  (compliquée / correcte / bien mangé), sorti ou non, et poids optionnel.
+- **Étiquettes** personnalisables (créées depuis le jour ou les réglages).
+- **Photos et vidéos** ajoutées depuis le sélecteur Android, copiées dans
+  l'espace privé de l'app, visibles en plein écran avec lecture vidéo.
+- **Recherche** dans tous les titres et toutes les notes.
+- **Bilan** : moyennes par mois et par an, meilleure semaine, semaine la plus
+  dure, séries de jours notés, courbe de poids + IMC, et surtout
+  **« Ce qui va avec tes bonnes journées »** : comparaison de l'humeur moyenne
+  selon le sport, les repas, les sorties et chaque étiquette.
+- **Rappel quotidien** : une notification à l'heure choisie, uniquement si la
+  journée n'est pas encore notée.
+- **Sauvegarde automatique quotidienne** dans un dossier choisi, en remplaçant
+  le fichier précédent (pas d'accumulation).
 - **Verrouillage** : code à 4–8 chiffres (stocké haché en PBKDF2, jamais en
   clair) + empreinte / reconnaissance faciale, re-verrouillage après 15 s en
   arrière-plan, blocage des captures d'écran.
-- **Sauvegarde** : export `.zip` complet (journées + notes + médias) et
-  restauration, vers l'emplacement de ton choix.
+- **Sauvegarde manuelle** : export `.zip` complet et restauration.
 - **Résumé annuel en texte** : export d'une année entière (titres, notes,
-  statistiques) pour préparer la vidéo de fin d'année.
+  détails, statistiques) pour préparer la vidéo de fin d'année.
 
 ## Échelle des couleurs
 
@@ -50,9 +57,15 @@ Les moyennes affichées (`x.x / 3`) ne comptent que les jours effectivement not�
 3. Décompresser le `.zip` et ouvrir `DayByDay.apk` depuis le téléphone.
 4. Android demandera d'autoriser l'installation depuis cette source : accepter.
 
-L'APK est signé avec la clé de debug : c'est suffisant pour un usage personnel,
-mais une mise à jour ne s'installera par-dessus que si elle vient du même
-workflow (même clé).
+L'APK est signé avec la clé fixe du dépôt (`DayByDay/keystore/daybyday.jks`),
+donc chaque nouvelle version s'installe par-dessus la précédente **sans effacer
+les données**. Cette clé est volontairement en clair : l'application n'est pas
+distribuée et ne demande aucune permission sensible.
+
+> La toute première version (1.0) était signée avec une clé aléatoire générée
+> par le runner. Pour passer de la 1.0 à la 1.1 il faut donc exporter une
+> sauvegarde, désinstaller, réinstaller, puis restaurer. Les mises à jour
+> suivantes s'installent normalement.
 
 ## Construire localement
 
@@ -67,6 +80,7 @@ cd DayByDay
 ## Où sont les données
 
 - Base de données : `/data/data/com.ismael.daybyday/databases/daybyday.db`
+  (version 2 ; la migration depuis la version 1 est testée sur émulateur)
 - Médias : `/data/data/com.ismael.daybyday/files/media/<année>/<mois>/`
 
 Ces dossiers sont privés à l'application (sandbox Android + chiffrement du
