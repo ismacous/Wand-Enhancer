@@ -19,6 +19,15 @@ import java.util.zip.ZipOutputStream
 
 data class BackupSummary(val days: Int, val mediaFiles: Int)
 
+/** Ce qu'on sait d'un fichier de sauvegarde sans l'avoir restaure. */
+data class BackupInfo(
+    val uri: Uri,
+    val name: String,
+    val exportedAt: Long,
+    val days: Int,
+    val mediaFiles: Int,
+)
+
 /**
  * Sauvegarde / restauration complete sous forme d'un fichier .zip choisi par
  * l'utilisateur (aucun envoi reseau : c'est un simple fichier local).
@@ -140,6 +149,55 @@ object Backup {
         }
         return BackupSummary(days = days.size, mediaFiles = copied)
     }
+
+    // --- Inspection -------------------------------------------------------
+
+    /** Lit uniquement la fiche d'identite d'une sauvegarde, sans rien ecraser. */
+    suspend fun peek(context: Context, source: Uri, name: String = ""): BackupInfo? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                var json: JSONObject? = null
+                val input = context.contentResolver.openInputStream(source)
+                    ?: return@runCatching null
+                ZipInputStream(input.buffered()).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null && json == null) {
+                        if (entry.name == JSON_NAME) {
+                            json = JSONObject(zip.readBytes().toString(Charsets.UTF_8))
+                        }
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+                json?.let { payload ->
+                    BackupInfo(
+                        uri = source,
+                        name = name,
+                        exportedAt = payload.optLong("exportedAt", 0L),
+                        days = payload.optJSONArray("days")?.length() ?: 0,
+                        mediaFiles = payload.optJSONArray("media")?.length() ?: 0,
+                    )
+                }
+            }.getOrNull()
+        }
+
+    /**
+     * Cherche la sauvegarde la plus recente dans un dossier choisi par
+     * l'utilisateur. Utilise apres une reinstallation pour retrouver les
+     * donnees sans rien avoir a chercher a la main.
+     */
+    suspend fun findLatestInFolder(context: Context, treeUri: Uri): BackupInfo? =
+        withContext(Dispatchers.IO) {
+            val folder = runCatching { DocumentFile.fromTreeUri(context, treeUri) }.getOrNull()
+                ?: return@withContext null
+            val candidates = runCatching { folder.listFiles().toList() }.getOrDefault(emptyList())
+                .filter { it.isFile && it.name?.endsWith(".zip", ignoreCase = true) == true }
+                .sortedByDescending { it.lastModified() }
+                .take(15)
+            candidates.firstNotNullOfOrNull { file ->
+                peek(context, file.uri, file.name.orEmpty())
+            }
+        }
 
     // --- Import -----------------------------------------------------------
 

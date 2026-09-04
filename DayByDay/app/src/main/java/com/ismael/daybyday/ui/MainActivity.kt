@@ -4,9 +4,15 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import com.ismael.daybyday.dayByDayApp
@@ -22,17 +28,30 @@ class MainActivity : FragmentActivity() {
         setContent {
             DayByDayTheme {
                 val app = dayByDayApp
+                // null tant qu'on ne sait pas encore si la base est vide.
+                var offerRestore by remember { mutableStateOf<Boolean?>(null) }
+                LaunchedEffect(Unit) {
+                    offerRestore = !app.prefs.firstRunRestoreChecked &&
+                        app.repository.allDays().isEmpty()
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    if (app.lock.isLocked) {
-                        LockScreen(
+                    when {
+                        app.lock.isLocked -> LockScreen(
                             prefs = app.prefs,
                             onUnlocked = { app.lock.unlock() },
                         )
-                    } else {
-                        AppNavigation()
+
+                        offerRestore == null -> Box(Modifier.fillMaxSize())
+
+                        offerRestore == true -> WelcomeRestoreScreen(
+                            onFinished = { offerRestore = false },
+                        )
+
+                        else -> AppNavigation()
                     }
                 }
             }
