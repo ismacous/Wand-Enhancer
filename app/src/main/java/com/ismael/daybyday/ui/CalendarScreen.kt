@@ -21,11 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +49,7 @@ import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayEntry
 import com.ismael.daybyday.data.Stats
 import com.ismael.daybyday.dayByDayApp
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -60,11 +59,10 @@ fun CalendarScreen(
     month: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
     onDayClick: (LocalDate) -> Unit,
-    onOpenYear: () -> Unit,
-    onOpenStats: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSearch: () -> Unit,
 ) {
-    val repository = LocalContext.current.dayByDayApp.repository
+    val app = LocalContext.current.dayByDayApp
+    val repository = app.repository
     val today = LocalDate.now()
 
     val gridStart = remember(month) {
@@ -81,29 +79,26 @@ fun CalendarScreen(
         .collectAsStateWithLifecycle(emptyMap())
     val mediaCounts by remember(month) { repository.observeMediaCounts(gridStart, gridEnd) }
         .collectAsStateWithLifecycle(emptyMap())
+    val todayEntry by remember { repository.observeDay(today) }
+        .collectAsStateWithLifecycle(null)
 
     val monthEntries = entries.values.filter {
         YearMonth.from(LocalDate.ofEpochDay(it.epochDay)) == month
     }
-    val monthSummary = Stats.summarize(
-        Dates.monthTitle(month),
-        monthEntries,
-        month.lengthOfMonth(),
-    )
+    val monthSummary = Stats.summarize(Dates.monthTitle(month), monthEntries, month.lengthOfMonth())
+
+    val greeting = remember(app.prefs.firstName) {
+        val name = app.prefs.firstName.trim()
+        if (name.isEmpty()) "DayByDay" else "Salut $name"
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("DayByDay") },
+                title = { Text(greeting) },
                 actions = {
-                    IconButton(onClick = onOpenYear) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Vue année")
-                    }
-                    IconButton(onClick = onOpenStats) {
-                        Icon(Icons.Default.Info, contentDescription = "Statistiques")
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Réglages")
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(Icons.Default.Search, contentDescription = "Rechercher")
                     }
                 },
             )
@@ -116,19 +111,32 @@ fun CalendarScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp),
         ) {
+            TodayCard(
+                today = today,
+                entry = todayEntry,
+                onPickColor = { color ->
+                    app.appScope.launch {
+                        val base = repository.dayOnce(today) ?: DayEntry(epochDay = today.toEpochDay())
+                        val next = if (base.colorKey == color.key) null else color.key
+                        repository.saveDay(base.copy(colorKey = next))
+                    }
+                },
+                onOpenToday = { onDayClick(today) },
+            )
+
+            Spacer(Modifier.height(16.dp))
+
             MonthHeader(
                 month = month,
                 onPrevious = { onMonthChange(month.minusMonths(1)) },
                 onNext = { onMonthChange(month.plusMonths(1)) },
-                onTitleClick = onOpenYear,
             )
 
             WeekDayHeader()
 
             repeat(weekCount) { weekIndex ->
-                val weekStart = gridStart.plusDays((weekIndex * 7).toLong())
                 WeekRow(
-                    weekStart = weekStart,
+                    weekStart = gridStart.plusDays((weekIndex * 7).toLong()),
                     month = month,
                     today = today,
                     entries = entries,
@@ -141,13 +149,11 @@ fun CalendarScreen(
 
             SummaryCard(title = "Bilan du mois", summary = monthSummary)
 
-            Spacer(Modifier.height(12.dp))
-
-            Legend()
-
             if (month != YearMonth.from(today)) {
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { onMonthChange(YearMonth.from(today)) }) {
+                TextButton(
+                    onClick = { onMonthChange(YearMonth.from(today)) },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
                     Text("Revenir à aujourd'hui")
                 }
             }
@@ -158,11 +164,82 @@ fun CalendarScreen(
 }
 
 @Composable
+private fun TodayCard(
+    today: LocalDate,
+    entry: DayEntry?,
+    onPickColor: (DayColor) -> Unit,
+    onOpenToday: () -> Unit,
+) {
+    SectionCard {
+        Text(
+            text = "Aujourd'hui · ${Dates.dayMedium(today)}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = entry?.color?.label ?: "Comment s'est passée ta journée ?",
+            style = MaterialTheme.typography.titleLarge,
+        )
+        val todayTitle = entry?.title.orEmpty()
+        if (todayTitle.isNotBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = todayTitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            DayColor.entries.forEach { dayColor ->
+                val selected = entry?.colorKey == dayColor.key
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(dayColor.color)
+                        .border(
+                            BorderStroke(
+                                if (selected) 3.dp else 1.dp,
+                                if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                },
+                            ),
+                            RoundedCornerShape(14.dp),
+                        )
+                        .clickable { onPickColor(dayColor) }
+                        .testTag("today-${dayColor.name}"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selected) {
+                        Text("✓", color = readableOn(dayColor.color), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        TextButton(onClick = onOpenToday) {
+            Text(if (entry == null) "Écrire dans mon journal" else "Ouvrir ma journée")
+        }
+    }
+}
+
+@Composable
 private fun MonthHeader(
     month: YearMonth,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onTitleClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -177,11 +254,7 @@ private fun MonthHeader(
             text = Dates.monthTitle(month),
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onTitleClick)
-                .padding(vertical = 6.dp),
+            modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onNext) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mois suivant")
@@ -191,7 +264,11 @@ private fun MonthHeader(
 
 @Composable
 private fun WeekDayHeader() {
-    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp),
+    ) {
         Dates.weekDayInitials.forEach { initial ->
             Text(
                 text = initial,
@@ -262,17 +339,17 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val dayColor = entry?.color
-    val emptyColor = MaterialTheme.colorScheme.surfaceVariant
-    val background = when {
-        dayColor != null -> dayColor.color
-        else -> emptyColor
-    }
+    val background = dayColor?.color ?: MaterialTheme.colorScheme.surfaceVariant
     val alpha = when {
         !inMonth -> 0.25f
         isFuture -> 0.55f
         else -> 1f
     }
-    val textColor = if (dayColor != null) readableOn(background) else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor = if (dayColor != null) {
+        readableOn(background)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Box(
         modifier = modifier
@@ -284,13 +361,13 @@ private fun DayCell(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(background.copy(alpha = alpha))
                 .then(
                     if (isToday) {
                         Modifier.border(
                             BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                            RoundedCornerShape(10.dp),
+                            RoundedCornerShape(12.dp),
                         )
                     } else {
                         Modifier
@@ -307,7 +384,9 @@ private fun DayCell(
             )
 
             val hasText = entry != null && (entry.title.isNotBlank() || entry.note.isNotBlank())
-            if (hasText || mediaCount > 0) {
+            val hasTracking = entry != null &&
+                (entry.sportLevel != null || entry.foodLevel != null || entry.wentOut != null)
+            if (hasText || hasTracking || mediaCount > 0) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -315,25 +394,28 @@ private fun DayCell(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     if (hasText) {
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .clip(CircleShape)
-                                .background(textColor.copy(alpha = 0.85f * alpha)),
-                        )
+                        Dot(textColor.copy(alpha = 0.85f * alpha), CircleShape)
                     }
                     if (mediaCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .clip(RoundedCornerShape(1.dp))
-                                .background(textColor.copy(alpha = 0.85f * alpha)),
-                        )
+                        Dot(textColor.copy(alpha = 0.85f * alpha), RoundedCornerShape(1.dp))
+                    }
+                    if (hasTracking) {
+                        Dot(textColor.copy(alpha = 0.5f * alpha), CircleShape)
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun Dot(color: androidx.compose.ui.graphics.Color, shape: androidx.compose.ui.graphics.Shape) {
+    Box(
+        modifier = Modifier
+            .size(4.dp)
+            .clip(shape)
+            .background(color),
+    )
 }
 
 @Composable
@@ -354,46 +436,6 @@ private fun WeekScore(weekNumber: Int, average: Double?) {
             .background(background),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = weekNumber.toString(),
-            fontSize = 11.sp,
-            color = textColor,
-        )
+        Text(text = weekNumber.toString(), fontSize = 11.sp, color = textColor)
     }
-}
-
-@Composable
-private fun Legend() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        DayColor.entries.forEach { color ->
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(color.color)
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), CircleShape),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = shortLabel(color),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-private fun shortLabel(color: DayColor): String = when (color) {
-    DayColor.GREEN -> "Bonne"
-    DayColor.ORANGE -> "Mitigée"
-    DayColor.RED -> "Difficile"
-    DayColor.BLACK -> "Très noire"
 }

@@ -50,4 +50,59 @@ class CalendarUiTest {
         }
         composeRule.onNodeWithText("Bonne journée").assertIsDisplayed()
     }
+
+    @Test
+    fun colorierAujourdHuiDepuisLAccueil() {
+        // Une couleur differente de l'autre test pour rester independant de
+        // l'ordre d'execution (un clic sur la couleur deja choisie l'enleve).
+        composeRule.onNodeWithTag("today-ORANGE").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Journée mitigée").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun lesOngletsDuBasFonctionnent() {
+        val year = LocalDate.now().year
+
+        composeRule.onNodeWithText("Bilan").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Mon bilan").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithText("Année").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Année $year").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithText("Réglages").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Rappel quotidien").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithText("Mois").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Bilan du mois").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun laRechercheTrouveUneJourneeEcrite() {
+        val today = LocalDate.now()
+        val marker = "Ruisseau${System.currentTimeMillis() % 100000}"
+
+        composeRule.onNodeWithTag("day-${today.toEpochDay()}").performClick()
+        composeRule.onNodeWithTag("day-note-field").performTextInput(marker)
+        composeRule.onNodeWithContentDescription("Retour").performClick()
+
+        composeRule.onNodeWithContentDescription("Rechercher").performClick()
+        composeRule.onNodeWithTag("search-field").performTextInput(marker)
+
+        // Le compteur de resultats n'apparait que si la journee est retrouvee
+        // en base (le champ de recherche contient deja le texte tape).
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("1 journée(s) trouvée(s)")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 }

@@ -5,6 +5,9 @@
          envoyer tes donnees sur un reseau. Tout reste dans le stockage prive
          de l'app sur le telephone. -->
 
+    <!-- Uniquement pour le rappel quotidien local. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".DayByDayApp"
         android:allowBackup="false"

@@ -13,15 +13,29 @@ android {
         applicationId = "com.ismael.daybyday"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr")
+    }
+
+    // Cle de signature fixe et volontairement publique : l'application n'est
+    // pas distribuee et n'a aucune permission sensible. Elle sert uniquement a
+    // ce que chaque nouvelle version s'installe par-dessus la precedente sans
+    // effacer les donnees deja saisies.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("../keystore/daybyday.jks")
+            storePassword = "daybyday"
+            keyAlias = "daybyday"
+            keyPassword = "daybyday"
+        }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false
@@ -74,6 +88,9 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
