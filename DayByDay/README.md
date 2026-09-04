@@ -10,34 +10,51 @@ sur un réseau.
 
 ## Fonctionnalités
 
+**Noter ses journées**
 - **Accueil** : la journée du jour se colorie en un tap, sans ouvrir d'écran.
-- **Calendrier mensuel** : chaque jour se colorie en vert, orange, rouge ou noir.
-  Des pastilles indiquent la présence d'un texte, de médias, ou d'un suivi rempli.
+- **Calendrier mensuel** : chaque jour en vert, orange, rouge ou noir. Des
+  pastilles signalent un texte, des médias, ou un suivi rempli.
+- **Moments de la journée** : matin, après-midi, soir et nuit se notent
+  séparément ; la couleur du jour est la moyenne des moments, sauf si elle est
+  choisie à la main.
 - **Note de la semaine** : à droite de chaque ligne du calendrier, une case
-  colorée résume la semaine (moyenne des jours notés) avec son numéro.
+  colorée résume la semaine avec son numéro.
 - **Vue année** : les 12 mois en miniature, chacun avec sa moyenne.
-- **Journal du jour** : titre + texte libre, sauvegarde automatique, navigation
-  jour par jour.
-- **Suivi quotidien** : sport (rien / un peu / vraie séance), alimentation
-  (compliquée / correcte / bien mangé), sorti ou non, et poids optionnel.
-- **Étiquettes** personnalisables (créées depuis le jour ou les réglages).
-- **Photos et vidéos** ajoutées depuis le sélecteur Android, copiées dans
-  l'espace privé de l'app, visibles en plein écran avec lecture vidéo.
+- **Journal du jour** : titre + texte libre, sauvegarde automatique.
+- **Photos et vidéos** copiées dans l'espace privé de l'app, visibles en plein
+  écran avec lecture vidéo.
 - **Recherche** dans tous les titres et toutes les notes.
+
+**Se suivre**
+- **Suivi quotidien** : sport, alimentation, sorti ou non, poids optionnel.
+- **Étiquettes** personnalisables, rangées par famille (sommeil, social,
+  activité, alimentation, travail, écrans, santé, autre).
+- **Pas et temps d'écran** lus localement (Health Connect et statistiques
+  d'usage Android), avec autorisation explicite et sans aucun réseau.
+- **Argent** : solde courant, rentrées et dépenses par mois, catégories, et
+  correction de solde enregistrée comme un ajustement.
+
+**Comprendre**
 - **Bilan** : moyennes par mois et par an, meilleure semaine, semaine la plus
-  dure, séries de jours notés, courbe de poids + IMC, et surtout
-  **« Ce qui va avec tes bonnes journées »** : comparaison de l'humeur moyenne
-  selon le sport, les repas, les sorties et chaque étiquette.
-- **Rappel quotidien** : une notification à l'heure choisie, uniquement si la
-  journée n'est pas encore notée.
+  dure, séries de jours notés, courbe de poids et IMC, moyenne par moment de
+  la journée.
+- **« Ce qui va avec tes bonnes journées »** : humeur moyenne les jours avec un
+  facteur contre les jours sans, pour le sport, les repas, les sorties, les
+  pas, le temps d'écran et chaque étiquette — affiché seulement quand les deux
+  groupes ont assez de journées.
+
+**Garder ses données**
+- **Rappel quotidien** à l'heure choisie, seulement si la journée n'est pas
+  encore notée.
 - **Sauvegarde automatique quotidienne** dans un dossier choisi, en remplaçant
-  le fichier précédent (pas d'accumulation).
-- **Verrouillage** : code à 4–8 chiffres (stocké haché en PBKDF2, jamais en
-  clair) + empreinte / reconnaissance faciale, re-verrouillage après 15 s en
-  arrière-plan, blocage des captures d'écran.
-- **Sauvegarde manuelle** : export `.zip` complet et restauration.
-- **Résumé annuel en texte** : export d'une année entière (titres, notes,
-  détails, statistiques) pour préparer la vidéo de fin d'année.
+  le fichier précédent.
+- **Reprise de sauvegarde** : au premier lancement sur une app vide, DayByDay
+  propose de chercher la dernière sauvegarde et annonce sa date avant de
+  restaurer.
+- **Sauvegarde manuelle** `.zip` et **résumé annuel en texte** pour la vidéo de
+  fin d'année.
+- **Verrouillage** : code haché en PBKDF2, empreinte / reconnaissance, blocage
+  des captures d'écran actif tant qu'aucun code n'est défini.
 
 ## Échelle des couleurs
 
@@ -80,7 +97,7 @@ cd DayByDay
 ## Où sont les données
 
 - Base de données : `/data/data/com.ismael.daybyday/databases/daybyday.db`
-  (version 2 ; la migration depuis la version 1 est testée sur émulateur)
+  (version 4 ; les migrations depuis la version 1 sont testées sur émulateur)
 - Médias : `/data/data/com.ismael.daybyday/files/media/<année>/<mois>/`
 
 Ces dossiers sont privés à l'application (sandbox Android + chiffrement du
