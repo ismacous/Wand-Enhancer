@@ -118,7 +118,13 @@ fun CalendarScreen(
                     app.appScope.launch {
                         val base = repository.dayOnce(today) ?: DayEntry(epochDay = today.toEpochDay())
                         val next = if (base.colorKey == color.key) null else color.key
-                        repository.saveDay(base.copy(colorKey = next))
+                        repository.saveDay(
+                            base.copy(
+                                colorKey = next,
+                                // Choix explicite : il prime sur la moyenne des moments.
+                                colorManual = next != null,
+                            )
+                        )
                     }
                 },
                 onOpenToday = { onDayClick(today) },

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -40,6 +41,7 @@ private val tabs = listOf(
     Tab("calendar", "Mois", Icons.Default.DateRange),
     Tab("year", "Année", Icons.AutoMirrored.Filled.List),
     Tab("stats", "Bilan", Icons.Default.Star),
+    Tab("money", "Argent", Icons.Default.ShoppingCart),
     Tab("settings", "Réglages", Icons.Default.Settings),
 )
 
@@ -99,6 +101,12 @@ fun AppNavigation() {
 
                 composable("stats") {
                     StatsScreen()
+                }
+
+                composable("money") {
+                    MoneyScreen(
+                        onDayClick = { date -> navController.navigate("day/${date.toEpochDay()}") },
+                    )
                 }
 
                 composable("settings") {

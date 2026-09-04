@@ -35,6 +35,17 @@ data class FactorInsight(
     val delta: Double get() = withAverage - withoutAverage
 }
 
+/** Moyenne d'un moment de la journee (matin, apres-midi, soir, nuit). */
+data class PartSummary(val part: DayPart, val average: Double?, val days: Int)
+
+/** Rentrees et depenses d'une periode, en centimes. */
+data class MoneySummary(val incomeCents: Long, val expenseCents: Long) {
+    /** Depenses en valeur positive, plus lisible a l'affichage. */
+    val spentCents: Long get() = -expenseCents
+
+    val netCents: Long get() = incomeCents + expenseCents
+}
+
 object Stats {
 
     val WEEK_FIELDS: WeekFields = WeekFields.of(Locale.FRANCE)
@@ -78,6 +89,21 @@ object Stats {
         }
         return current to longest
     }
+
+    /** Moyenne d'humeur par moment de la journee. */
+    fun partAverages(days: List<DayEntry>): List<PartSummary> = DayPart.entries.map { part ->
+        val colors = days.mapNotNull { it.partColor(part) }
+        PartSummary(
+            part = part,
+            average = if (colors.isEmpty()) null else colors.sumOf { it.score }.toDouble() / colors.size,
+            days = colors.size,
+        )
+    }
+
+    fun summarizeMoney(entries: Collection<MoneyEntry>): MoneySummary = MoneySummary(
+        incomeCents = entries.filter { it.amountCents > 0 }.sumOf { it.amountCents },
+        expenseCents = entries.filter { it.amountCents < 0 }.sumOf { it.amountCents },
+    )
 
     private fun averageScore(entries: Collection<DayEntry>): Double? {
         val colors = entries.mapNotNull { it.color }
