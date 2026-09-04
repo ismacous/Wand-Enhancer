@@ -8,7 +8,9 @@ import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayDao
 import com.ismael.daybyday.data.DayEntry
 import com.ismael.daybyday.data.DayTagCrossRef
+import com.ismael.daybyday.data.DayPart
 import com.ismael.daybyday.data.MediaItem
+import com.ismael.daybyday.data.MoneyEntry
 import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Tag
 import kotlinx.coroutines.flow.first
@@ -179,5 +181,40 @@ class DayDaoTest {
         assertEquals(130.4, weights.first().weightKg, 0.001)
         assertEquals(SportLevel.GOOD, stored?.sport)
         assertEquals(true, stored?.wentOut)
+    }
+
+    @Test
+    fun mouvementsDArgentEtSolde(): Unit = runBlocking {
+        val day = LocalDate.of(2026, 9, 10).toEpochDay()
+        dao.upsertMoney(MoneyEntry(epochDay = day, amountCents = 120_000, label = "Salaire"))
+        dao.upsertMoney(MoneyEntry(epochDay = day, amountCents = -45_50, label = "Courses"))
+        dao.upsertMoney(MoneyEntry(epochDay = day + 40, amountCents = -1_000, label = "Hors période"))
+
+        val balance = dao.observeMoneyBalance().first()
+        val inMonth = dao.observeMoneyBetween(day - 5, day + 5).first()
+
+        assertEquals(120_000L - 4_550L - 1_000L, balance)
+        assertEquals(2, inMonth.size)
+
+        dao.deleteMoney(inMonth.first().id)
+        assertEquals(2, dao.allMoney().size)
+    }
+
+    @Test
+    fun momentsDeLaJourneeEnregistres(): Unit = runBlocking {
+        val epochDay = LocalDate.of(2026, 9, 11).toEpochDay()
+        dao.upsertDay(
+            DayEntry(epochDay = epochDay)
+                .withPartColor(DayPart.MORNING, DayColor.GREEN.key)
+                .withPartColor(DayPart.NIGHT, DayColor.BLACK.key)
+        )
+
+        val stored = dao.dayOnce(epochDay)
+
+        assertEquals(DayColor.GREEN, stored?.partColor(DayPart.MORNING))
+        assertEquals(DayColor.BLACK, stored?.partColor(DayPart.NIGHT))
+        assertEquals(null, stored?.partColor(DayPart.EVENING))
+        // Moyenne de 3 et 0 -> 1,5 arrondi vers la couleur la plus proche.
+        assertEquals(2, stored?.filledParts?.size)
     }
 }

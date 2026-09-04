@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ismael.daybyday.data.Backup
-import com.ismael.daybyday.data.Tag
+import com.ismael.daybyday.data.TagCategory
 import com.ismael.daybyday.dayByDayApp
 import com.ismael.daybyday.work.DailyScheduler
 import kotlinx.coroutines.Dispatchers
@@ -462,14 +462,25 @@ fun SettingsScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    tags.forEach { tag ->
-                        TagRow(
-                            tag = tag,
-                            onDelete = { scope.launch { repository.deleteTag(tag) } },
-                        )
+                    TagCategory.entries.forEach { category ->
+                        val categoryTags = tags.filter { it.group == category }
+                        if (categoryTags.isNotEmpty()) {
+                            Text(
+                                text = category.label.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
+                            )
+                            categoryTags.forEach { tag ->
+                                TagRow(
+                                    tag = tag,
+                                    onDelete = { scope.launch { repository.deleteTag(tag) } },
+                                )
+                            }
+                        }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = { showNewTagDialog = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -513,11 +524,17 @@ fun SettingsScreen() {
                 )
                 SettingSwitchRow(
                     title = "Bloquer les captures d'écran",
-                    subtitle = "Masque aussi l'aperçu dans la liste des applis récentes.",
+                    subtitle = if (hasPin) {
+                        "Masque aussi l'aperçu dans la liste des applis récentes."
+                    } else {
+                        "Actif en permanence tant qu'aucun code n'est défini. " +
+                            "Définis un code pour pouvoir l'autoriser."
+                    },
                     checked = blockScreenshots,
+                    enabled = hasPin,
                     onCheckedChange = {
-                        blockScreenshots = it
                         prefs.blockScreenshots = it
+                        blockScreenshots = prefs.blockScreenshots
                         (context.findActivity() as? MainActivity)?.applySecureFlag()
                     },
                 )
@@ -533,7 +550,9 @@ fun SettingsScreen() {
                             prefs.lockEnabled = false
                             hasPin = false
                             lockEnabled = false
+                            blockScreenshots = prefs.blockScreenshots
                             app.lock.refresh()
+                            (context.findActivity() as? MainActivity)?.applySecureFlag()
                         }) {
                             Text("Supprimer le code")
                         }
@@ -593,6 +612,7 @@ fun SettingsScreen() {
             onConfirm = { pin ->
                 prefs.setPin(pin)
                 hasPin = true
+                blockScreenshots = prefs.blockScreenshots
                 if (!prefs.lockEnabled) {
                     prefs.lockEnabled = true
                     lockEnabled = true
@@ -606,9 +626,9 @@ fun SettingsScreen() {
     if (showNewTagDialog) {
         NewTagDialog(
             onDismiss = { showNewTagDialog = false },
-            onCreate = { emoji, name ->
+            onCreate = { emoji, name, category ->
                 showNewTagDialog = false
-                scope.launch { repository.createTag(name, emoji) }
+                scope.launch { repository.createTag(name, emoji, category) }
             },
         )
     }

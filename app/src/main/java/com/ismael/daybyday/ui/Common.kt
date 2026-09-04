@@ -78,6 +78,15 @@ fun formatWeight(weightKg: Double?): String =
 fun formatSignedKg(delta: Double): String =
     String.format(Locale.FRANCE, "%+.1f kg", delta)
 
+/** Montant en centimes vers un texte en euros. */
+fun formatMoney(cents: Long): String =
+    String.format(Locale.FRANCE, "%,.2f €", cents / 100.0).replace('\u00A0', ' ')
+
+fun formatSignedMoney(cents: Long): String {
+    val sign = if (cents > 0) "+" else if (cents < 0) "−" else ""
+    return sign + formatMoney(kotlin.math.abs(cents))
+}
+
 /** Noir ou blanc selon la luminosite du fond, pour rester lisible. */
 fun readableOn(background: Color): Color {
     val luminance = 0.299f * background.red + 0.587f * background.green + 0.114f * background.blue

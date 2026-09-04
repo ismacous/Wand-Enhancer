@@ -84,6 +84,29 @@ interface DayDao {
     @Query("SELECT COUNT(*) FROM day_tags WHERE epochDay = :epochDay")
     suspend fun tagCountForDay(epochDay: Long): Int
 
+    // --- Argent -----------------------------------------------------------
+
+    @Query("SELECT * FROM transactions ORDER BY epochDay DESC, id DESC")
+    fun observeAllMoney(): Flow<List<MoneyEntry>>
+
+    @Query("SELECT * FROM transactions WHERE epochDay BETWEEN :start AND :end ORDER BY epochDay DESC, id DESC")
+    fun observeMoneyBetween(start: Long, end: Long): Flow<List<MoneyEntry>>
+
+    @Query("SELECT COALESCE(SUM(amountCents), 0) FROM transactions")
+    fun observeMoneyBalance(): Flow<Long>
+
+    @Query("SELECT * FROM transactions ORDER BY epochDay, id")
+    suspend fun allMoney(): List<MoneyEntry>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMoney(entry: MoneyEntry): Long
+
+    @Query("DELETE FROM transactions WHERE id = :id")
+    suspend fun deleteMoney(id: Long)
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAllMoney()
+
     // --- Medias -----------------------------------------------------------
 
     @Query("SELECT * FROM media_items WHERE epochDay = :epochDay ORDER BY addedAt, id")

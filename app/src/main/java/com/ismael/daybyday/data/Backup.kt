@@ -36,7 +36,7 @@ object Backup {
 
     private const val JSON_NAME = "daybyday.json"
     private const val MEDIA_PREFIX = "media/"
-    private const val FORMAT_VERSION = 2
+    private const val FORMAT_VERSION = 3
 
     const val AUTO_BACKUP_NAME = "DayByDay-sauvegarde-auto.zip"
 
@@ -75,6 +75,7 @@ object Backup {
         val mediaItems = repository.allMedia()
         val tags = repository.allTags()
         val links = repository.allDayTags()
+        val money = repository.allMoney()
 
         val root = JSONObject()
         root.put("version", FORMAT_VERSION)
@@ -93,6 +94,11 @@ object Backup {
                     .put("foodLevel", day.foodLevel ?: JSONObject.NULL)
                     .put("wentOut", day.wentOut ?: JSONObject.NULL)
                     .put("weightKg", day.weightKg ?: JSONObject.NULL)
+                    .put("partMorning", day.partMorning ?: JSONObject.NULL)
+                    .put("partAfternoon", day.partAfternoon ?: JSONObject.NULL)
+                    .put("partEvening", day.partEvening ?: JSONObject.NULL)
+                    .put("partNight", day.partNight ?: JSONObject.NULL)
+                    .put("colorManual", day.colorManual ?: JSONObject.NULL)
             )
         }
         root.put("days", daysJson)
@@ -117,6 +123,7 @@ object Backup {
                     .put("name", tag.name)
                     .put("emoji", tag.emoji)
                     .put("sortOrder", tag.sortOrder)
+                    .put("category", tag.category ?: JSONObject.NULL)
             )
         }
         root.put("tags", tagsJson)
@@ -130,6 +137,19 @@ object Backup {
             )
         }
         root.put("dayTags", linksJson)
+
+        val moneyJson = JSONArray()
+        money.forEach { entry ->
+            moneyJson.put(
+                JSONObject()
+                    .put("epochDay", entry.epochDay)
+                    .put("amountCents", entry.amountCents)
+                    .put("label", entry.label)
+                    .put("categoryKey", entry.categoryKey ?: JSONObject.NULL)
+                    .put("createdAt", entry.createdAt)
+            )
+        }
+        root.put("money", moneyJson)
 
         var copied = 0
         ZipOutputStream(output.buffered()).use { zip ->
@@ -250,6 +270,15 @@ object Backup {
                         foodLevel = item.optIntOrNull("foodLevel"),
                         wentOut = if (item.isNull("wentOut")) null else item.optBoolean("wentOut"),
                         weightKg = if (item.isNull("weightKg")) null else item.optDouble("weightKg"),
+                        partMorning = item.optIntOrNull("partMorning"),
+                        partAfternoon = item.optIntOrNull("partAfternoon"),
+                        partEvening = item.optIntOrNull("partEvening"),
+                        partNight = item.optIntOrNull("partNight"),
+                        colorManual = if (item.isNull("colorManual")) {
+                            null
+                        } else {
+                            item.optBoolean("colorManual")
+                        },
                     )
                 }
 
@@ -274,6 +303,7 @@ object Backup {
                         name = item.getString("name"),
                         emoji = item.optString("emoji", ""),
                         sortOrder = item.optInt("sortOrder", i),
+                        category = if (item.isNull("category")) null else item.optString("category"),
                     )
                 }
 
@@ -287,12 +317,29 @@ object Backup {
                     )
                 }
 
+                val money = mutableListOf<MoneyEntry>()
+                val moneyJson = json.optJSONArray("money") ?: JSONArray()
+                for (i in 0 until moneyJson.length()) {
+                    val item = moneyJson.getJSONObject(i)
+                    money += MoneyEntry(
+                        epochDay = item.getLong("epochDay"),
+                        amountCents = item.getLong("amountCents"),
+                        label = item.optString("label", ""),
+                        categoryKey = if (item.isNull("categoryKey")) {
+                            null
+                        } else {
+                            item.optString("categoryKey")
+                        },
+                        createdAt = item.optLong("createdAt", System.currentTimeMillis()),
+                    )
+                }
+
                 repository.media.deleteAll()
                 staging.walkTopDown().filter { it.isFile }.forEach { file ->
                     val relative = file.relativeTo(staging).path.replace(File.separatorChar, '/')
                     file.inputStream().use { repository.media.writeFrom(relative, it) }
                 }
-                repository.replaceAll(days, mediaItems, tags, links)
+                repository.replaceAll(days, mediaItems, tags, links, money)
 
                 BackupSummary(days = days.size, mediaFiles = restoredFiles)
             } finally {
@@ -365,6 +412,11 @@ object Backup {
                 builder.appendLine("### ${date.format(dayFormat)} — $label")
                 if (entry.title.isNotBlank()) builder.appendLine("**${entry.title}**")
                 if (entry.note.isNotBlank()) builder.appendLine(entry.note)
+
+                val moments = DayPart.entries.mapNotNull { part ->
+                    entry.partColor(part)?.let { "${part.label} : ${it.label}" }
+                }
+                if (moments.isNotEmpty()) builder.appendLine(moments.joinToString(" · "))
 
                 val details = buildList {
                     entry.sport?.let { add("Sport : ${it.label}") }

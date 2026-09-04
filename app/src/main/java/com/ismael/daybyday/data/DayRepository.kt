@@ -61,11 +61,18 @@ class DayRepository(context: Context) {
 
     suspend fun allDayTags(): List<DayTagCrossRef> = dao.allDayTags()
 
-    suspend fun createTag(name: String, emoji: String) {
+    suspend fun createTag(name: String, emoji: String, category: TagCategory) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         val order = (dao.allTags().maxOfOrNull { it.sortOrder } ?: 0) + 1
-        dao.insertTag(Tag(name = trimmed, emoji = emoji.trim(), sortOrder = order))
+        dao.insertTag(
+            Tag(
+                name = trimmed,
+                emoji = emoji.trim(),
+                sortOrder = order,
+                category = category.key,
+            )
+        )
     }
 
     suspend fun deleteTag(tag: Tag) {
@@ -114,11 +121,31 @@ class DayRepository(context: Context) {
         cleanUpIfEmpty(item.epochDay)
     }
 
+    // --- Argent -----------------------------------------------------------
+
+    fun observeMoneyBetween(start: LocalDate, end: LocalDate): Flow<List<MoneyEntry>> =
+        dao.observeMoneyBetween(start.toEpochDay(), end.toEpochDay())
+
+    fun observeAllMoney(): Flow<List<MoneyEntry>> = dao.observeAllMoney()
+
+    fun observeMoneyBalance(): Flow<Long> = dao.observeMoneyBalance()
+
+    suspend fun allMoney(): List<MoneyEntry> = dao.allMoney()
+
+    suspend fun saveMoney(entry: MoneyEntry) {
+        dao.upsertMoney(entry)
+    }
+
+    suspend fun deleteMoney(entry: MoneyEntry) {
+        dao.deleteMoney(entry.id)
+    }
+
     // --- Sauvegarde / remise a zero ---------------------------------------
 
     suspend fun clearEverything() {
         dao.deleteAllMedia()
         dao.deleteAllDayTags()
+        dao.deleteAllMoney()
         dao.deleteAllDays()
         media.deleteAll()
     }
@@ -128,9 +155,11 @@ class DayRepository(context: Context) {
         mediaItems: List<MediaItem>,
         tags: List<Tag>,
         links: List<DayTagCrossRef>,
+        money: List<MoneyEntry>,
     ) {
         dao.deleteAllMedia()
         dao.deleteAllDayTags()
+        dao.deleteAllMoney()
         dao.deleteAllDays()
         if (tags.isNotEmpty()) {
             dao.deleteAllTags()
@@ -139,5 +168,6 @@ class DayRepository(context: Context) {
         days.forEach { dao.upsertDay(it) }
         mediaItems.forEach { dao.insertMedia(it.copy(id = 0)) }
         links.forEach { dao.linkTag(it) }
+        money.forEach { dao.upsertMoney(it.copy(id = 0)) }
     }
 }

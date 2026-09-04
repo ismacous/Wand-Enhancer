@@ -8,8 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [DayEntry::class, MediaItem::class, Tag::class, DayTagCrossRef::class],
-    version = 2,
+    entities = [
+        DayEntry::class,
+        MediaItem::class,
+        Tag::class,
+        DayTagCrossRef::class,
+        MoneyEntry::class,
+    ],
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,24 +26,51 @@ abstract class AppDatabase : RoomDatabase() {
         private const val NAME = "daybyday.db"
 
         /** Etiquettes proposees au premier lancement ; tout est modifiable ensuite. */
+        /** emoji, nom, famille. */
         val DEFAULT_TAGS = listOf(
-            "😴" to "Bien dormi",
-            "🥱" to "Mal dormi",
-            "🚶" to "Marche",
-            "👥" to "Ami·es",
-            "🏠" to "Famille",
-            "💼" to "Travail",
-            "🍳" to "Cuisine maison",
-            "🍟" to "Fast-food",
-            "📱" to "Écrans +++",
-            "🌳" to "Dehors / nature",
+            Triple("😴", "Bien dormi", TagCategory.SLEEP),
+            Triple("🥱", "Mal dormi", TagCategory.SLEEP),
+            Triple("👥", "Ami·es", TagCategory.SOCIAL),
+            Triple("🏠", "Famille", TagCategory.SOCIAL),
+            Triple("💬", "Copine", TagCategory.SOCIAL),
+            Triple("🚶", "Marche", TagCategory.ACTIVITY),
+            Triple("🌳", "Dehors / nature", TagCategory.ACTIVITY),
+            Triple("🍳", "Cuisine maison", TagCategory.FOOD),
+            Triple("🍟", "Fast-food", TagCategory.FOOD),
+            Triple("💼", "Recherche d'emploi", TagCategory.WORK),
+            Triple("📱", "Écrans +++", TagCategory.SCREENS),
+            Triple("🎮", "Jeux vidéo", TagCategory.SCREENS),
         )
 
+        /** Insertion pour une base fraiche, qui possede deja la colonne category. */
         private fun seedTags(db: SupportSQLiteDatabase) {
-            DEFAULT_TAGS.forEachIndexed { index, (emoji, name) ->
+            DEFAULT_TAGS.forEachIndexed { index, (emoji, name, category) ->
+                db.execSQL(
+                    "INSERT INTO tags (name, emoji, sortOrder, category) VALUES (?, ?, ?, ?)",
+                    arrayOf<Any>(name, emoji, index, category.key),
+                )
+            }
+        }
+
+        /**
+         * Insertion au format de la version 2 : la colonne category n'existe pas
+         * encore a ce stade, elle est ajoutee par la migration suivante.
+         */
+        private fun seedTagsWithoutCategory(db: SupportSQLiteDatabase) {
+            DEFAULT_TAGS.forEachIndexed { index, (emoji, name, _) ->
                 db.execSQL(
                     "INSERT INTO tags (name, emoji, sortOrder) VALUES (?, ?, ?)",
                     arrayOf<Any>(name, emoji, index),
+                )
+            }
+        }
+
+        /** Range les etiquettes deja creees dans leur famille. */
+        private fun categorizeExistingTags(db: SupportSQLiteDatabase) {
+            DEFAULT_TAGS.forEach { (_, name, category) ->
+                db.execSQL(
+                    "UPDATE tags SET category = ? WHERE name = ? AND category IS NULL",
+                    arrayOf<Any>(category.key, name),
                 )
             }
         }
@@ -62,7 +95,33 @@ abstract class AppDatabase : RoomDatabase() {
                         "PRIMARY KEY(`epochDay`, `tagId`))"
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_day_tags_tagId` ON `day_tags` (`tagId`)")
-                seedTags(db)
+                seedTagsWithoutCategory(db)
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN partMorning INTEGER")
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN partAfternoon INTEGER")
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN partEvening INTEGER")
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN partNight INTEGER")
+                db.execSQL("ALTER TABLE day_entries ADD COLUMN colorManual INTEGER")
+                db.execSQL("UPDATE day_entries SET colorManual = 1 WHERE colorKey IS NOT NULL")
+                db.execSQL("ALTER TABLE tags ADD COLUMN category TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `transactions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`epochDay` INTEGER NOT NULL, " +
+                        "`amountCents` INTEGER NOT NULL, " +
+                        "`label` TEXT NOT NULL, " +
+                        "`categoryKey` TEXT, " +
+                        "`createdAt` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_transactions_epochDay` " +
+                        "ON `transactions` (`epochDay`)"
+                )
+                categorizeExistingTags(db)
             }
         }
 
@@ -81,7 +140,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 NAME,
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(seedCallback)
                 .build()
                 .also { instance = it }

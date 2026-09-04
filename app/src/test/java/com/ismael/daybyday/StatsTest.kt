@@ -2,7 +2,9 @@ package com.ismael.daybyday
 
 import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayEntry
+import com.ismael.daybyday.data.DayPart
 import com.ismael.daybyday.data.DayTagCrossRef
+import com.ismael.daybyday.data.MoneyEntry
 import com.ismael.daybyday.data.FoodLevel
 import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Stats
@@ -165,5 +167,65 @@ class StatsTest {
         assertTrue(DayEntry(epochDay = 0).isEmpty)
         assertTrue(!DayEntry(epochDay = 0, sportLevel = SportLevel.NONE.key).isEmpty)
         assertTrue(!DayEntry(epochDay = 0, weightKg = 130.0).isEmpty)
+    }
+
+    @Test
+    fun `la couleur du jour est la moyenne des moments`() {
+        val day = DayEntry(epochDay = 0)
+            .withPartColor(DayPart.MORNING, DayColor.GREEN.key)
+            .withPartColor(DayPart.EVENING, DayColor.RED.key)
+
+        // 3 et 1 -> moyenne 2 -> orange.
+        assertEquals(DayColor.ORANGE, day.averagePartColor)
+
+        val hardDay = DayEntry(epochDay = 0)
+            .withPartColor(DayPart.EVENING, DayColor.BLACK.key)
+            .withPartColor(DayPart.NIGHT, DayColor.BLACK.key)
+        assertEquals(DayColor.BLACK, hardDay.averagePartColor)
+
+        assertNull(DayEntry(epochDay = 0).averagePartColor)
+    }
+
+    @Test
+    fun `moyenne par moment de la journee`() {
+        val days = listOf(
+            DayEntry(epochDay = 1)
+                .withPartColor(DayPart.MORNING, DayColor.GREEN.key)
+                .withPartColor(DayPart.EVENING, DayColor.RED.key),
+            DayEntry(epochDay = 2)
+                .withPartColor(DayPart.MORNING, DayColor.GREEN.key)
+                .withPartColor(DayPart.EVENING, DayColor.BLACK.key),
+        )
+
+        val parts = Stats.partAverages(days)
+        val morning = parts.first { it.part == DayPart.MORNING }
+        val evening = parts.first { it.part == DayPart.EVENING }
+        val afternoon = parts.first { it.part == DayPart.AFTERNOON }
+
+        assertEquals(3.0, morning.average!!, 0.001)
+        assertEquals(0.5, evening.average!!, 0.001)
+        assertEquals(2, morning.days)
+        assertNull(afternoon.average)
+    }
+
+    @Test
+    fun `gains et depenses du mois`() {
+        val entries = listOf(
+            MoneyEntry(epochDay = 1, amountCents = 120_000, label = "Salaire"),
+            MoneyEntry(epochDay = 2, amountCents = -45_50, label = "Courses"),
+            MoneyEntry(epochDay = 3, amountCents = -80_000, label = "Loyer"),
+        )
+
+        val summary = Stats.summarizeMoney(entries)
+
+        assertEquals(120_000L, summary.incomeCents)
+        assertEquals(84_550L, summary.spentCents)
+        assertEquals(35_450L, summary.netCents)
+    }
+
+    @Test
+    fun `une journee avec seulement un moment note n est pas vide`() {
+        val day = DayEntry(epochDay = 0).withPartColor(DayPart.NIGHT, DayColor.RED.key)
+        assertTrue(!day.isEmpty)
     }
 }

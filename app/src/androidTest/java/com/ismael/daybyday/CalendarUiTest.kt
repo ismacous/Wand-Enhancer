@@ -93,6 +93,11 @@ class CalendarUiTest {
             composeRule.onAllNodesWithText("Année $year").fetchSemanticsNodes().isNotEmpty()
         }
 
+        composeRule.onNodeWithText("Argent").performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Ce qu'il te reste").fetchSemanticsNodes().isNotEmpty()
+        }
+
         composeRule.onNodeWithText("Réglages").performClick()
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule.onAllNodesWithText("Rappel quotidien").fetchSemanticsNodes().isNotEmpty()
@@ -120,6 +125,25 @@ class CalendarUiTest {
         // en base (le champ de recherche contient deja le texte tape).
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule.onAllNodesWithText("1 journée(s) trouvée(s)")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun noterUnMomentDeLaJourneeColoreLaJournee() {
+        // Un jour que les autres tests ne touchent pas, pour que la couleur du
+        // jour soit encore en mode automatique.
+        val day = LocalDate.now().minusDays(3)
+
+        composeRule.onNodeWithTag("day-${day.toEpochDay()}").performClick()
+        composeRule.onNodeWithText("Les moments de la journée").assertIsDisplayed()
+
+        // Un matin vert et une nuit noire donnent une journée orange en moyenne.
+        composeRule.onNodeWithTag("part-MORNING-GREEN").performClick()
+        composeRule.onNodeWithTag("part-NIGHT-BLACK").performClick()
+
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Calculée à partir de tes moments de la journée.")
                 .fetchSemanticsNodes().isNotEmpty()
         }
     }

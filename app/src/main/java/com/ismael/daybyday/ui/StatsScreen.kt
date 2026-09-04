@@ -42,6 +42,7 @@ import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayEntry
 import com.ismael.daybyday.data.FactorInsight
 import com.ismael.daybyday.data.FoodLevel
+import com.ismael.daybyday.data.PartSummary
 import com.ismael.daybyday.data.PeriodSummary
 import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Stats
@@ -116,6 +117,10 @@ fun StatsScreen() {
             }
 
             SummaryCard(title = "Bilan de l'année", summary = yearSummary)
+
+            Spacer(Modifier.height(16.dp))
+
+            PartsCard(Stats.partAverages(yearDays))
 
             Spacer(Modifier.height(16.dp))
 
@@ -196,6 +201,52 @@ fun StatsScreen() {
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun PartsCard(parts: List<PartSummary>) {
+    SectionCard(title = "Tes moments de la journée") {
+        if (parts.all { it.days == 0 }) {
+            Text(
+                "Note tes matins, après-midis, soirs et nuits dans une journée : " +
+                    "tu verras ici quels moments sont les plus durs.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@SectionCard
+        }
+        parts.forEach { part ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "${part.part.emoji} ${part.part.label}",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        "${part.days} jour(s) noté(s)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                AverageChip(part.average)
+            }
+        }
+        val worst = parts.filter { it.days >= 3 && it.average != null }.minByOrNull { it.average!! }
+        val best = parts.filter { it.days >= 3 && it.average != null }.maxByOrNull { it.average!! }
+        if (worst != null && best != null && worst.part != best.part) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Tes ${best.part.label.lowercase()}s sont tes meilleurs moments, " +
+                    "tes ${worst.part.label.lowercase()}s les plus durs.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

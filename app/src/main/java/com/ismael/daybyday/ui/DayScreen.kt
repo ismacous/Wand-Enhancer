@@ -41,6 +41,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -68,11 +69,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ismael.daybyday.data.DayColor
 import com.ismael.daybyday.data.DayEntry
+import com.ismael.daybyday.data.DayPart
 import com.ismael.daybyday.data.FoodLevel
 import com.ismael.daybyday.data.MediaItem
 import com.ismael.daybyday.data.MediaKind
 import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Tag
+import com.ismael.daybyday.data.TagCategory
 import com.ismael.daybyday.dayByDayApp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -103,6 +106,8 @@ fun DayScreen(
     var sportLevel by remember { mutableStateOf<Int?>(null) }
     var foodLevel by remember { mutableStateOf<Int?>(null) }
     var wentOut by remember { mutableStateOf<Boolean?>(null) }
+    var parts by remember { mutableStateOf<Map<DayPart, Int>>(emptyMap()) }
+    var colorManual by remember { mutableStateOf(false) }
     var weightText by remember { mutableStateOf("") }
     var loadedFor by remember { mutableStateOf<Long?>(null) }
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
@@ -125,7 +130,18 @@ fun DayScreen(
         foodLevel = foodLevel,
         wentOut = wentOut,
         weightKg = weightText.replace(',', '.').toDoubleOrNull(),
+        partMorning = parts[DayPart.MORNING],
+        partAfternoon = parts[DayPart.AFTERNOON],
+        partEvening = parts[DayPart.EVENING],
+        partNight = parts[DayPart.NIGHT],
+        colorManual = colorManual,
     )
+
+    /** Applique la couleur d'un moment, et recalcule la couleur du jour. */
+    fun setPart(part: DayPart, key: Int?) {
+        parts = if (key == null) parts - part else parts + (part to key)
+        if (!colorManual) colorKey = averageColorKey(parts.values)
+    }
 
     LaunchedEffect(epochDay) {
         loadedFor = null
@@ -137,10 +153,26 @@ fun DayScreen(
         foodLevel = entry?.foodLevel
         wentOut = entry?.wentOut
         weightText = entry?.weightKg?.let { String.format(java.util.Locale.FRANCE, "%.1f", it) }.orEmpty()
+        parts = DayPart.entries.mapNotNull { part ->
+            entry?.partColorKey(part)?.let { part to it }
+        }.toMap()
+        colorManual = entry?.colorManual ?: (entry?.colorKey != null)
         loadedFor = epochDay
     }
 
-    LaunchedEffect(epochDay, loadedFor, colorKey, title, note, sportLevel, foodLevel, wentOut, weightText) {
+    LaunchedEffect(
+        epochDay,
+        loadedFor,
+        colorKey,
+        title,
+        note,
+        sportLevel,
+        foodLevel,
+        wentOut,
+        weightText,
+        parts,
+        colorManual,
+    ) {
         if (loadedFor != epochDay) return@LaunchedEffect
         delay(SAVE_DEBOUNCE_MS)
         repository.saveDay(currentEntry(epochDay))
@@ -244,7 +276,13 @@ fun DayScreen(
                             dayColor = dayColor,
                             selected = colorKey == dayColor.key,
                             onClick = {
-                                colorKey = if (colorKey == dayColor.key) null else dayColor.key
+                                if (colorKey == dayColor.key && colorManual) {
+                                    colorManual = false
+                                    colorKey = averageColorKey(parts.values)
+                                } else {
+                                    colorKey = dayColor.key
+                                    colorManual = true
+                                }
                             },
                             modifier = Modifier.weight(1f),
                         )
@@ -256,6 +294,36 @@ fun DayScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (parts.isNotEmpty()) {
+                    Text(
+                        text = if (colorManual) {
+                            "Choisie à la main. Touche-la à nouveau pour revenir à la moyenne de tes moments."
+                        } else {
+                            "Calculée à partir de tes moments de la journée."
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            SectionCard(title = "Les moments de la journée") {
+                Text(
+                    "Ton humeur bouge dans la journée : note chaque moment, la couleur " +
+                        "du jour se calcule toute seule.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                DayPart.entries.forEach { part ->
+                    PartRow(
+                        part = part,
+                        selectedKey = parts[part],
+                        onPick = { key -> setPart(part, key) },
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -372,33 +440,46 @@ fun DayScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(Modifier.height(8.dp))
-                }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    allTags.forEach { tag ->
-                        val selected = tag.id in selectedTagIds
-                        ChoiceChip(
-                            label = tag.display,
-                            selected = selected,
-                            onClick = {
-                                scope.launch {
-                                    repository.toggleTag(
-                                        LocalDate.ofEpochDay(epochDay),
-                                        tag,
-                                        !selected,
+                } else {
+                    TagCategory.entries.forEach { category ->
+                        val categoryTags = allTags.filter { it.group == category }
+                        if (categoryTags.isNotEmpty()) {
+                            Text(
+                                text = category.label.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                categoryTags.forEach { tag ->
+                                    val selected = tag.id in selectedTagIds
+                                    ChoiceChip(
+                                        label = tag.display,
+                                        selected = selected,
+                                        onClick = {
+                                            scope.launch {
+                                                repository.toggleTag(
+                                                    LocalDate.ofEpochDay(epochDay),
+                                                    tag,
+                                                    !selected,
+                                                )
+                                            }
+                                        },
                                     )
                                 }
-                            },
-                        )
+                            }
+                        }
                     }
-                    ChoiceChip(
-                        label = "＋ Nouvelle",
-                        selected = false,
-                        onClick = { showNewTagDialog = true },
-                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                OutlinedButton(
+                    onClick = { showNewTagDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Nouvelle étiquette")
                 }
             }
 
@@ -472,11 +553,11 @@ fun DayScreen(
     if (showNewTagDialog) {
         NewTagDialog(
             onDismiss = { showNewTagDialog = false },
-            onCreate = { emoji, name ->
+            onCreate = { emoji, name, category ->
                 showNewTagDialog = false
                 val day = LocalDate.ofEpochDay(epochDay)
                 scope.launch {
-                    repository.createTag(name, emoji)
+                    repository.createTag(name, emoji, category)
                     val created = repository.allTags().lastOrNull { it.name == name.trim() }
                     if (created != null) repository.toggleTag(day, created, true)
                 }
@@ -485,16 +566,20 @@ fun DayScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun NewTagDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+fun NewTagDialog(onDismiss: () -> Unit, onCreate: (String, String, TagCategory) -> Unit) {
     var name by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(TagCategory.OTHER) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nouvelle étiquette") },
         text = {
-            Column {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(24) },
@@ -508,11 +593,26 @@ fun NewTagDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
                     label = { Text("Emoji (optionnel)") },
                     singleLine = true,
                 )
+                Spacer(Modifier.height(12.dp))
+                Text("Ranger dans", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TagCategory.entries.forEach { option ->
+                        ChoiceChip(
+                            label = option.label,
+                            selected = category == option,
+                            onClick = { category = option },
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onCreate(emoji, name) },
+                onClick = { onCreate(emoji, name, category) },
                 enabled = name.isNotBlank(),
             ) { Text("Créer") }
         },
@@ -520,6 +620,64 @@ fun NewTagDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
             TextButton(onClick = onDismiss) { Text("Annuler") }
         },
     )
+}
+
+/** Ligne d'un moment de la journee : le libelle et les quatre couleurs. */
+@Composable
+private fun PartRow(part: DayPart, selectedKey: Int?, onPick: (Int?) -> Unit) {
+    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+        Text(
+            text = "${part.emoji} ${part.label}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            DayColor.entries.forEach { dayColor ->
+                val selected = selectedKey == dayColor.key
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(dayColor.color)
+                        .border(
+                            BorderStroke(
+                                if (selected) 3.dp else 1.dp,
+                                if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                },
+                            ),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .clickable { onPick(if (selected) null else dayColor.key) }
+                        .testTag("part-${part.name}-${dayColor.name}"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Sélectionné",
+                            tint = readableOn(dayColor.color),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Couleur moyenne (arrondie) d'une liste de moments notes. */
+private fun averageColorKey(partKeys: Collection<Int>): Int? {
+    val colors = partKeys.mapNotNull { DayColor.fromKey(it) }
+    if (colors.isEmpty()) return null
+    val average = colors.sumOf { it.score }.toDouble() / colors.size
+    return DayColor.entries.minByOrNull { kotlin.math.abs(it.score - average) }?.key
 }
 
 @Composable

@@ -50,9 +50,18 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_BIOMETRIC, true)
         set(value) = prefs.edit().putBoolean(KEY_BIOMETRIC, value).apply()
 
+    /**
+     * Le blocage des captures est actif par defaut et ne peut etre desactive
+     * qu'une fois un code defini : sans code, l'ecran reste protege.
+     */
     var blockScreenshots: Boolean
-        get() = prefs.getBoolean(KEY_SECURE_SCREEN, true)
-        set(value) = prefs.edit().putBoolean(KEY_SECURE_SCREEN, value).apply()
+        get() = if (!hasPin) true else prefs.getBoolean(KEY_SECURE_SCREEN, true)
+        set(value) {
+            if (hasPin) prefs.edit().putBoolean(KEY_SECURE_SCREEN, value).apply()
+        }
+
+    /** Vrai quand l'utilisateur peut choisir lui-meme d'autoriser les captures. */
+    val canToggleScreenshots: Boolean get() = hasPin
 
     val hasPin: Boolean get() = prefs.getString(KEY_PIN_HASH, null) != null
 
