@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,7 +72,7 @@ fun StatsScreen(onBack: () -> Unit) {
                 title = { Text("Statistiques") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
             )
@@ -87,7 +87,7 @@ fun StatsScreen(onBack: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { year -= 1 }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Année précédente")
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Année précédente")
                 }
                 Text(
                     text = year.toString(),
@@ -96,7 +96,7 @@ fun StatsScreen(onBack: () -> Unit) {
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
                 IconButton(onClick = { year += 1 }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Année suivante")
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Année suivante")
                 }
             }
 
