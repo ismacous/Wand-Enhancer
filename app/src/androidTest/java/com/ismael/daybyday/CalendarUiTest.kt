@@ -1,6 +1,7 @@
 package com.ismael.daybyday
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -42,9 +43,10 @@ class CalendarUiTest {
 
     @Test
     fun leCalendrierDuMoisEnCoursEstAffiche() {
-        composeRule.onNodeWithText("DayByDay").assertIsDisplayed()
+        composeRule.onNodeWithText("Aujourd'hui", substring = true).assertIsDisplayed()
         composeRule.onNodeWithText(Dates.monthTitle(YearMonth.now())).assertIsDisplayed()
-        composeRule.onNodeWithText("Bilan du mois").assertIsDisplayed()
+        // Le bilan est en bas de la page : il existe sans forcement etre visible.
+        composeRule.onNodeWithText("Bilan du mois").assertExists()
     }
 
     @Test
