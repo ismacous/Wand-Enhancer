@@ -26,6 +26,11 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: DayByDay
+
       - name: Install SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
@@ -67,6 +72,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: DayByDay
 
       - name: Enable KVM
         run: |

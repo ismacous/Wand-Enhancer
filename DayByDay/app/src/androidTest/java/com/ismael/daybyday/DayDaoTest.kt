@@ -40,7 +40,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun ecritureEtRelectureDUneJournee() = runBlocking {
+    fun ecritureEtRelectureDUneJournee(): Unit = runBlocking {
         val date = LocalDate.of(2026, 5, 12)
         dao.upsertDay(
             DayEntry(
@@ -58,7 +58,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun miseAJourDUneJourneeExistante() = runBlocking {
+    fun miseAJourDUneJourneeExistante(): Unit = runBlocking {
         val epochDay = LocalDate.of(2026, 5, 13).toEpochDay()
         dao.upsertDay(DayEntry(epochDay = epochDay, colorKey = DayColor.RED.key))
         dao.upsertDay(DayEntry(epochDay = epochDay, colorKey = DayColor.GREEN.key, title = "Mieux"))
@@ -71,7 +71,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun lectureParPlageDeDates() = runBlocking {
+    fun lectureParPlageDeDates(): Unit = runBlocking {
         val start = LocalDate.of(2026, 6, 1)
         (0 until 5).forEach { offset ->
             dao.upsertDay(
@@ -91,7 +91,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun comptageDesMediasParJour() = runBlocking {
+    fun comptageDesMediasParJour(): Unit = runBlocking {
         val epochDay = LocalDate.of(2026, 7, 4).toEpochDay()
         dao.upsertDay(DayEntry(epochDay = epochDay))
         dao.insertMedia(MediaItem(epochDay = epochDay, relativePath = "2026/07/a.jpg", kindKey = 0))
@@ -105,7 +105,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun suppressionDUneJournee() = runBlocking {
+    fun suppressionDUneJournee(): Unit = runBlocking {
         val epochDay = LocalDate.of(2026, 8, 9).toEpochDay()
         dao.upsertDay(DayEntry(epochDay = epochDay, colorKey = DayColor.BLACK.key))
         dao.deleteDay(epochDay)
@@ -114,7 +114,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun rechercheDansLesTitresEtLesNotes() = runBlocking {
+    fun rechercheDansLesTitresEtLesNotes(): Unit = runBlocking {
         val base = LocalDate.of(2026, 9, 1).toEpochDay()
         dao.upsertDay(DayEntry(epochDay = base, title = "Retour à la maison", note = "Journée calme"))
         dao.upsertDay(DayEntry(epochDay = base + 1, title = "Boulot", note = "Longue réunion"))
@@ -130,7 +130,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun etiquettesLieesEtDelieesDUneJournee() = runBlocking {
+    fun etiquettesLieesEtDelieesDUneJournee(): Unit = runBlocking {
         val epochDay = LocalDate.of(2026, 9, 2).toEpochDay()
         val tagId = dao.insertTag(Tag(name = "Marche", emoji = "🚶", sortOrder = 0))
         dao.upsertDay(DayEntry(epochDay = epochDay))
@@ -144,7 +144,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun supprimerUneEtiquetteNeCasseRien() = runBlocking {
+    fun supprimerUneEtiquetteNeCasseRien(): Unit = runBlocking {
         val epochDay = LocalDate.of(2026, 9, 3).toEpochDay()
         val tagId = dao.insertTag(Tag(name = "Fast-food", sortOrder = 1))
         dao.upsertDay(DayEntry(epochDay = epochDay))
@@ -159,7 +159,7 @@ class DayDaoTest {
     }
 
     @Test
-    fun suiviDuPoidsEtDesDetailsDeLaJournee() = runBlocking {
+    fun suiviDuPoidsEtDesDetailsDeLaJournee(): Unit = runBlocking {
         val base = LocalDate.of(2026, 9, 4).toEpochDay()
         dao.upsertDay(
             DayEntry(

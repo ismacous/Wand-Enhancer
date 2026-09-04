@@ -23,7 +23,7 @@ import java.time.LocalDate
 class BackupTest {
 
     @Test
-    fun exporterPuisRelireLaFicheDeLaSauvegarde() = runBlocking {
+    fun exporterPuisRelireLaFicheDeLaSauvegarde(): Unit = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = DayRepository(context)
 
@@ -51,7 +51,7 @@ class BackupTest {
     }
 
     @Test
-    fun unFichierQuiNEstPasUneSauvegardeEstIgnore() = runBlocking {
+    fun unFichierQuiNEstPasUneSauvegardeEstIgnore(): Unit = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "pas-une-sauvegarde.zip")
         file.writeText("ceci n'est pas un zip")
