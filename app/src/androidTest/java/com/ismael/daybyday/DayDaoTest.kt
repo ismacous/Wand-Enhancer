@@ -13,6 +13,7 @@ import com.ismael.daybyday.data.MediaItem
 import com.ismael.daybyday.data.MoneyEntry
 import com.ismael.daybyday.data.SportLevel
 import com.ismael.daybyday.data.Tag
+import com.ismael.daybyday.data.TagCatalog
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -216,5 +217,37 @@ class DayDaoTest {
         assertEquals(null, stored?.partColor(DayPart.EVENING))
         // Moyenne de 3 et 0 -> 1,5 arrondi vers la couleur la plus proche.
         assertEquals(2, stored?.filledParts?.size)
+    }
+
+    @Test
+    fun leCatalogueDEtiquettesRecupereLesAnciensNoms(): Unit = runBlocking {
+        // Une etiquette de l'ancienne version, sans identifiant stable,
+        // rattachee a une journee.
+        val epochDay = LocalDate.of(2026, 9, 12).toEpochDay()
+        val oldId = dao.insertTag(Tag(name = "Travail", emoji = "💼", sortOrder = 5))
+        dao.upsertDay(DayEntry(epochDay = epochDay))
+        dao.linkTag(DayTagCrossRef(epochDay = epochDay, tagId = oldId))
+
+        TagCatalog.sync(dao)
+
+        val tags = dao.allTags()
+        // Aucune etiquette en double, et toutes portent desormais un slug.
+        assertEquals(TagCatalog.tags.size, tags.size)
+        assertEquals(0, tags.count { it.slug == null })
+
+        // L'ancienne "Travail" est devenue "Recherche d'emploi" en gardant son id,
+        // donc la journee reste marquee.
+        val renamed = tags.first { it.slug == "job_search" }
+        assertEquals(oldId, renamed.id)
+        assertEquals("Recherche d'emploi", renamed.name)
+        assertEquals(1, dao.tagCountForDay(epochDay))
+    }
+
+    @Test
+    fun synchroniserDeuxFoisNeCreePasDeDoublon(): Unit = runBlocking {
+        TagCatalog.sync(dao)
+        TagCatalog.sync(dao)
+
+        assertEquals(TagCatalog.tags.size, dao.allTags().size)
     }
 }

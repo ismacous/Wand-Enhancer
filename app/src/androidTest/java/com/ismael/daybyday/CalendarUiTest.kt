@@ -55,7 +55,7 @@ class CalendarUiTest {
         val title = "Test ${System.currentTimeMillis()}"
 
         composeRule.onNodeWithTag(dayTag).performClick()
-        composeRule.onNodeWithText("Couleur du jour").assertIsDisplayed()
+        composeRule.onNodeWithText("Comment tu te sens").assertIsDisplayed()
 
         composeRule.onNodeWithTag("color-GREEN").performClick()
         composeRule.onNodeWithTag("day-title-field").performTextInput(title)
@@ -136,14 +136,14 @@ class CalendarUiTest {
         val day = LocalDate.now().minusDays(3)
 
         composeRule.onNodeWithTag("day-${day.toEpochDay()}").performClick()
-        composeRule.onNodeWithText("Les moments de la journée").assertIsDisplayed()
+        composeRule.onNodeWithText("Moment par moment").assertIsDisplayed()
 
         // Un matin vert et une nuit noire donnent une journée orange en moyenne.
         composeRule.onNodeWithTag("part-MORNING-GREEN").performClick()
         composeRule.onNodeWithTag("part-NIGHT-BLACK").performClick()
 
         composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithText("Calculée à partir de tes moments de la journée.")
+            composeRule.onAllNodesWithText("Calculée à partir de tes moments.")
                 .fetchSemanticsNodes().isNotEmpty()
         }
     }

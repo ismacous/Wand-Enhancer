@@ -100,7 +100,6 @@ fun SettingsScreen() {
 
     var showPinDialog by remember { mutableStateOf(false) }
     var showEraseDialog by remember { mutableStateOf(false) }
-    var showNewTagDialog by remember { mutableStateOf(false) }
     var searchingBackup by remember { mutableStateOf(false) }
     var stepsGranted by remember { mutableStateOf(false) }
     var screenGranted by remember { mutableStateOf(false) }
@@ -531,37 +530,28 @@ fun SettingsScreen() {
 
             // --- Etiquettes -----------------------------------------------
             SectionCard(title = "Mes étiquettes") {
-                if (tags.isEmpty()) {
-                    Text(
-                        "Aucune étiquette pour l'instant.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    TagCategory.entries.forEach { category ->
-                        val categoryTags = tags.filter { it.group == category }
-                        if (categoryTags.isNotEmpty()) {
-                            Text(
-                                text = category.label.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
-                            )
-                            categoryTags.forEach { tag ->
-                                TagRow(
-                                    tag = tag,
-                                    onDelete = { scope.launch { repository.deleteTag(tag) } },
-                                )
-                            }
-                        }
+                Text(
+                    "Les ${tags.size} étiquettes sont fournies avec l'application et rangées " +
+                        "par famille. Elles évoluent avec les mises à jour : rien à gérer ici, " +
+                        "et tes journées déjà marquées sont conservées.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(10.dp))
+                TagCategory.entries.forEach { category ->
+                    val names = tags.filter { it.group == category }
+                    if (names.isNotEmpty()) {
+                        Text(
+                            text = category.label.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+                        )
+                        Text(
+                            text = names.joinToString(" · ") { it.display },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
-                }
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { showNewTagDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Ajouter une étiquette")
                 }
             }
 
@@ -695,16 +685,6 @@ fun SettingsScreen() {
                 }
                 showPinDialog = false
                 scope.launch { snackbar.showSnackbar("Code enregistré.") }
-            },
-        )
-    }
-
-    if (showNewTagDialog) {
-        NewTagDialog(
-            onDismiss = { showNewTagDialog = false },
-            onCreate = { emoji, name, category ->
-                showNewTagDialog = false
-                scope.launch { repository.createTag(name, emoji, category) }
             },
         )
     }

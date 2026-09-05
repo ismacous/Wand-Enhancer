@@ -1,6 +1,7 @@
 package com.ismael.daybyday.health
 
 import android.app.AppOpsManager
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -11,9 +12,13 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Temps passe sur les applications, lu depuis les statistiques d'usage
- * d'Android. Necessite l'autorisation speciale "Acces aux donnees
- * d'utilisation", accordee a la main dans les reglages du telephone.
+ * Temps reel passe sur le telephone, lu depuis les evenements d'usage
+ * d'Android. On additionne des intervalles qui ne se chevauchent pas : quand
+ * plusieurs applications se relaient, la periode ne compte qu'une seule fois.
+ *
+ * Additionner le "temps au premier plan" de chaque application, comme le fait
+ * queryAndAggregateUsageStats, donne des totaux absurdes (16 h dans une
+ * journee) parce que les periodes des applications se recouvrent.
  */
 object ScreenTimeSource {
 
@@ -40,23 +45,51 @@ object ScreenTimeSource {
     fun settingsIntent(): Intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** Minutes passees sur les applications ce jour-la, ou null sans autorisation. */
+    /** Minutes d'utilisation reelle du telephone ce jour-la, ou null sans autorisation. */
     fun minutesFor(context: Context, date: LocalDate): Int? {
         if (!hasPermission(context)) return null
         val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             ?: return null
+
         val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = minOf(
+        val dayStart = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val dayEnd = minOf(
             date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
             System.currentTimeMillis(),
         )
-        if (end <= start) return null
+        if (dayEnd <= dayStart) return null
 
-        val stats = runCatching { manager.queryAndAggregateUsageStats(start, end) }
-            .getOrNull() ?: return null
-        if (stats.isEmpty()) return null
-        val totalMillis = stats.values.sumOf { it.totalTimeInForeground }
-        return (totalMillis / 60_000L).toInt()
+        val events = runCatching { manager.queryEvents(dayStart, dayEnd) }.getOrNull() ?: return null
+
+        var total = 0L
+        var openedAt = 0L
+        val event = UsageEvents.Event()
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            when (event.eventType) {
+                // Une application passe au premier plan : le telephone est utilise.
+                UsageEvents.Event.ACTIVITY_RESUMED ->
+                    if (openedAt == 0L) openedAt = event.timeStamp
+
+                // Retour en arriere-plan ou ecran eteint : on ferme l'intervalle.
+                UsageEvents.Event.ACTIVITY_PAUSED,
+                UsageEvents.Event.ACTIVITY_STOPPED,
+                UsageEvents.Event.SCREEN_NON_INTERACTIVE,
+                UsageEvents.Event.KEYGUARD_SHOWN,
+                -> if (openedAt != 0L) {
+                    total += (event.timeStamp - openedAt).coerceAtLeast(0L)
+                    openedAt = 0L
+                }
+            }
+        }
+
+        // Session encore ouverte a la fin de la periode observee.
+        if (openedAt != 0L) total += (dayEnd - openedAt).coerceAtLeast(0L)
+
+        // Filet de securite : jamais plus que le temps ecoule dans la journee.
+        val elapsed = dayEnd - dayStart
+        val minutes = (minOf(total, elapsed) / 60_000L).toInt()
+        return if (minutes <= 0) null else minutes
     }
 }
