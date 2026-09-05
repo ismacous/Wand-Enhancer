@@ -4,17 +4,16 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Quatre tuiles : les quatre couleurs d'une journee. -->
     <path
-        android:fillColor="#3FBF6A"
+        android:fillColor="#FFFFFF"
         android:pathData="M34,27 h10 a7,7 0 0 1 7,7 v10 a7,7 0 0 1 -7,7 h-10 a7,7 0 0 1 -7,-7 v-10 a7,7 0 0 1 7,-7 z" />
     <path
-        android:fillColor="#F2A93B"
+        android:fillColor="#FFFFFF"
         android:pathData="M64,27 h10 a7,7 0 0 1 7,7 v10 a7,7 0 0 1 -7,7 h-10 a7,7 0 0 1 -7,-7 v-10 a7,7 0 0 1 7,-7 z" />
     <path
-        android:fillColor="#E1483F"
+        android:fillColor="#FFFFFF"
         android:pathData="M34,57 h10 a7,7 0 0 1 7,7 v10 a7,7 0 0 1 -7,7 h-10 a7,7 0 0 1 -7,-7 v-10 a7,7 0 0 1 7,-7 z" />
     <path
-        android:fillColor="#15171D"
+        android:fillColor="#FFFFFF"
         android:pathData="M64,57 h10 a7,7 0 0 1 7,7 v10 a7,7 0 0 1 -7,7 h-10 a7,7 0 0 1 -7,-7 v-10 a7,7 0 0 1 7,-7 z" />
 </vector>

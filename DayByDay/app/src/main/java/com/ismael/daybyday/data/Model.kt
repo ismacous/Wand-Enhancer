@@ -170,6 +170,8 @@ data class Tag(
     val emoji: String = "",
     val sortOrder: Int = 0,
     val category: String? = null,
+    /** Identifiant stable d'une etiquette fournie avec l'application. */
+    val slug: String? = null,
 ) {
     val display: String get() = if (emoji.isBlank()) name else "$emoji $name"
 

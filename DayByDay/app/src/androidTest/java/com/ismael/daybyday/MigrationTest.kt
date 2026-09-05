@@ -59,6 +59,7 @@ class MigrationTest {
                 AppDatabase.MIGRATION_1_2,
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5,
             )
             .build()
 
@@ -77,6 +78,8 @@ class MigrationTest {
                 val tags = dao.allTags()
                 assertTrue(tags.isNotEmpty())
                 assertTrue(tags.any { it.category != null })
+                // La colonne d'identifiant stable existe (vide avant synchronisation).
+                assertEquals(null, tags.first().slug)
                 // La table des mouvements d'argent est utilisable.
                 dao.upsertMoney(
                     com.ismael.daybyday.data.MoneyEntry(

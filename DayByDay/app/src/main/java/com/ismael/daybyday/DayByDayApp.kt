@@ -7,13 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
+import com.ismael.daybyday.data.AppDatabase
 import com.ismael.daybyday.data.DayRepository
 import com.ismael.daybyday.data.Prefs
+import com.ismael.daybyday.data.TagCatalog
 import com.ismael.daybyday.work.DailyScheduler
 import com.ismael.daybyday.work.ReminderWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class DayByDayApp : Application() {
 
@@ -28,6 +31,9 @@ class DayByDayApp : Application() {
         super.onCreate()
         createReminderChannel()
         DailyScheduler.rescheduleAll(this, prefs)
+        appScope.launch {
+            runCatching { TagCatalog.sync(AppDatabase.get(this@DayByDayApp).dayDao()) }
+        }
     }
 
     private fun createReminderChannel() {
